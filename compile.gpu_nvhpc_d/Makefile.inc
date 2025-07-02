@@ -1,1 +1,1 @@
-./Makefile.gpu_nvhpc_d
+../Makefile.gpu_nvhpc_d

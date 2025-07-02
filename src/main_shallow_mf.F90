@@ -180,9 +180,7 @@ ENDIF
 CLOUT = '-'; CALL GETOPTION ("--out", CLOUT)
 
 CALL CHECKOPTIONS
-
 CALL LOADALL
-
 IF (LLVERBOSE) THEN
 WRITE (0, *) " NPROMA = ", NPROMA, " NGPBLKS = ", NGPBLKS, " KLEV = ", KLEV
 WRITE (0, *) " ISIZE4 = ", ISIZE4, " ISIZE8 = ", ISIZE8, " NTIME = ", NTIME
@@ -218,9 +216,8 @@ DO ITIME = 1, NTIME
 
   IF (TRIM (CLMETHOD) == 'openmp') THEN
  
-!$OMP PARALLEL DO PRIVATE (JBLK) 
+!$OMP PARALLEL DO PRIVATE (JBLK)
     DO JBLK = 1, NGPBLKS
-   
       CALL SHALLOW_MF( &
           D, CST, NEBN, PARAMMF, TURBN, CSTURB,ICEP,            &
        &  KRR, KRRL, KRRI, KSV,                                 &
@@ -246,7 +243,7 @@ DO ITIME = 1, NTIME
        &  IKLCL(:,JBLK),IKETL(:,JBLK),IKCTL(:,JBLK),PDX,PDY,                            &
        &  KBUDGETS=KBUDGETS                            )
     ENDDO
-  
+
   ELSEIF (TRIM (CLMETHOD) == 'openmpsinglecolumn') THEN
 
     YSTACK%IALIGN = 8 
@@ -254,7 +251,7 @@ DO ITIME = 1, NTIME
     IF (ISIZE8 > 0) ALLOCATE (YSTACK%ZDATA8 (NPROMA, KLEV, ISIZE8, NGPBLKS))
 !$OMP PARALLEL DO PRIVATE (JBLK, JLON, YLSTACK) FIRSTPRIVATE(D) COLLAPSE(2)
     DO JBLK = 1, NGPBLKS
-      DO JLON = NPROMA,1,-1
+      DO JLON = 1,NPROMA
         D%NIJB=JLON
         D%NIJE=JLON
         D%NIB=JLON
@@ -488,7 +485,6 @@ D%NIBC=1
 D%NIEC=KLON
 D%NIT=KLON
 D%NIJT=KLON
-
 CALL LOAD (ILUNFI,  ZZZ             , YDD=YLD)
 CALL LOAD (ILUNFI,  ZDZZ            , YDD=YLD)
 CALL LOAD (ILUNFI,  ZRHODJ          , YDD=YLD)
