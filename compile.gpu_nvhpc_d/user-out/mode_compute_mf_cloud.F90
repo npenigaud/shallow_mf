@@ -135,7 +135,7 @@ PWEIGHT_MF_CLOUD(:,:) = 0.
 IF (PARAMMF%CMF_CLOUD == 'DIRE') THEN
   !Direct cloud scheme
   CALL COMPUTE_MF_CLOUD_DIRECT(D, PARAMMF, &
-                              &KKLCL(:), PFRAC_UP, PRC_UP, PRI_UP,&
+                              &KKLCL, PFRAC_UP, PRC_UP, PRI_UP,&
                               &PRC_MF, PRI_MF, PCF_MF, PWEIGHT_MF_CLOUD)
   !
 ELSEIF (PARAMMF%CMF_CLOUD == 'STAT') THEN

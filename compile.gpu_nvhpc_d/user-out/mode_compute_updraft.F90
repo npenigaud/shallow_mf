@@ -543,12 +543,12 @@ DO JK=IKB,IKE-IKL,IKL
                            PRHODREF(:,JK),ZPRES_F(:,JK),ZPRES_F(:,JK+IKL),ZEXN_F(:,JK),&
                            PZZ,PDZZ,ZTHVM,  &
                            PTHLM,PRTM,ZW_UP2,PTH_UP(:,JK),   &
-                           PTHL_UP(:,JK),PRT_UP(:,JK),ZLUPSURF(:), ZLUP(:), ZLDOWN(:), &
+                           PTHL_UP(:,JK),PRT_UP(:,JK),ZLUPSURF, ZLUP, ZLDOWN, &
                            PRC_UP(:,JK),PRI_UP(:,JK),PTHV_UP(:,JK),&
                            PRSAT_UP(:,JK),ZRC_MIX(:,JK),ZRI_MIX(:,JK),                 &
                            PENTR(:,JK),PDETR(:,JK),ZENTR_CLD(:,JK),ZDETR_CLD(:,JK),&
                            ZBUO_INTEG_DRY(:,JK), ZBUO_INTEG_CLD(:,JK), &
-                           ZPART_DRY(:)   )
+                           ZPART_DRY   )
     DO JIJ=IIJB, IIJE
       PBUO_INTEG(JIJ, JK)=ZBUO_INTEG_DRY(JIJ, JK)+ZBUO_INTEG_CLD(JIJ, JK)
 
