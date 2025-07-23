@@ -28,20 +28,20 @@ arch=gpu_nvhpc_d
 ##  --method $method > $method.txt 2>&1
 ##done
 
-##for method in openmp openmpsinglecolumn openaccsinglecolumn
-##do
-##../compile.${arch}/main_shallow_mf.x  \
-##  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_gpu/ \
-##  --verbose  --diff  \
-##  --nproma 64        \
-##  --method $method > $method.txt 2>&1
-##done
-
 for method in openmp openmpsinglecolumn openaccsinglecolumn
 do
 ../compile.${arch}/main_shallow_mf.x  \
-  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu/ \
+  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_gpu/ \
   --verbose  --diff  \
   --nproma 64        \
   --method $method > $method.txt 2>&1
 done
+
+##for method in openmp openmpsinglecolumn openaccsinglecolumn
+##do
+##../compile.${arch}/main_shallow_mf.x  \
+##  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu/ \
+##  --verbose  --diff  \
+##  --nproma 64        \
+##  --method $method > $method.txt 2>&1
+##done
