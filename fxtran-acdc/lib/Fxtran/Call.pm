@@ -6,18 +6,17 @@ package Fxtran::Call;
 # philippe.marguinaud@meteo.fr
 #
 
-use Data::Dumper;
 
 use strict;
-
 use Fxtran;
 use Fxtran::Subroutine;
+use Data::Dumper;
 
 sub addSuffix
 {
   my ($pu, %opts) = @_;
 
-  my ($suffix, $match, $section, $contained) = @opts{qw (suffix match section contained)};
+  my ($suffix, $match, $section) = @opts{qw (suffix match section)};
 
   my ($ep) = &F ('./execution-part', $pu);
   my ($dp) = &F ('./specification-part/declaration-part', $pu);
@@ -25,28 +24,19 @@ sub addSuffix
 
   $section ||= $pu;
 
-  my %contained;
-
-  unless ($contained)
-    {
-      %contained = map { ($_, 1) }
-        &F ('//subroutine-stmt[count(ancestor::program-unit)>1]/subroutine-N/N/n/text()', $pu, 1);
-    }
+  my %contained = map { ($_, 1) } &F ('//subroutine-stmt[count(ancestor::program-unit)>1]/subroutine-N/N/n/text()', $pu, 1);
 
   my %proc;
   for my $proc (&F ('.//call-stmt/procedure-designator', $section))
     {
-      my $name = $proc->textContent;
-      next if ($name =~ m/%/o);
-      next if ($name eq 'DR_HOOK');
+      next if ($proc->textContent =~ m/%/o);
+      next if ($proc->textContent eq 'DR_HOOK');
       ($proc) = &F ('./named-E/N/n/text()', $proc);
       next if ($contained{$proc->textContent});
-
       if ($match)
         {
           next unless $match->($proc);
         }
-
       $proc{$proc->textContent} = 1;
       $proc->setData ($proc->textContent . $suffix);
     }
@@ -59,10 +49,9 @@ sub addSuffix
 
       for my $ext (@ext)
         {
-          next if (&F ('./include[string(filename)="?"]', lc ($proc) . lc ($suffix) . $ext, $dp));
           next unless (my ($include) = &F ('./include[string(filename)="?"]', lc ($proc) . $ext, $dp));
   
-          if (&F ('.//call-stmt[string(procedure-designator)="?"]', $proc, $ep))
+          if (&F ('./call-stmt[string(procedure-designator)="?"]', $proc, $ep))
             {
               my $include1 = $include->cloneNode (1);
               my ($t) = &F ('./filename/text()', $include1); 
@@ -98,6 +87,7 @@ sub addSuffix
         }
 
     }   
+
 
 }
 

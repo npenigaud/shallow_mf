@@ -34,10 +34,10 @@ sub requireUtilMod
 
 sub setOpenMPDirective
 {
-  my ($par, $t, %opts) = @_;
+  my ($par, $t) = @_;
 
-  my $style = $par->getAttribute ('style');
-  $style = $style ? 'Fxtran::Style'->new (style => $style) : $opts{style};
+  my $style = $par->getAttribute ('style') || 'IAL';
+  $style = 'Fxtran::Style'->new (style => $style);
 
   my @firstprivate = ('YLCPG_BNDS');
 
@@ -60,11 +60,11 @@ sub setOpenMPDirective
 sub makeParallel
 {
   shift;
-  my ($pu, $par1, $t, %opts) = @_;
+  my ($par1, $t) = @_;
 
-  my $style = $par1->getAttribute ('style');
-  $style = $style ? 'Fxtran::Style'->new (style => $style) : $opts{style};
-  
+  my $style = $par1->getAttribute ('style') || 'IAL';
+  $style = 'Fxtran::Style'->new (style => $style);
+
   my $FILTER = $par1->getAttribute ('filter');
 
   my $init;
@@ -90,7 +90,7 @@ sub makeParallel
   $par1->insertBefore ($init, $do);
   $par1->insertBefore (&t ("\n"), $do);
 
-  &setOpenMPDirective ($par1, $t, %opts);
+  &setOpenMPDirective ($par1, $t);
 
   return $par1;
 }

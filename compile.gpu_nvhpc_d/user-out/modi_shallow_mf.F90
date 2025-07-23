@@ -2,7 +2,6 @@
      MODULE MODI_SHALLOW_MF
 
 !$ACDC singlecolumn --process-interfaces
-!$ACDC bitrepro
 
 !    ######################
 !

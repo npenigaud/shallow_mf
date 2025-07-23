@@ -42,11 +42,6 @@ sub simplify
     '//named-E[string(.)="LLVERINT_ON_CPU"]'                       => &e ('.FALSE.'),
   );
 
-  for my $n (&F ('.//n/text()[string(.)="YDGEO"', $d))
-    {
-      $n->setData ('YDGEOMETRY');
-    }
-
   if (my $set = $opts{'set-variables'})
     {
       my %set;

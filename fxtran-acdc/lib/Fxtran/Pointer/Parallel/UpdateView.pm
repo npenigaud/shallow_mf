@@ -37,11 +37,9 @@ sub requireUtilMod
 sub makeParallel
 {
   shift;
-  my ($pu, $par1, $t, %opts) = @_;
+  my ($par1, $t, %opts) = @_;
 
-  my $style = $opts{style};
-  $style ||= 'Fxtran::Style'->new (style => ($par1->getAttribute ('style') || 'IAL'));
-  
+  my $style = $par1->getAttribute ('style') || 'IAL';
   my $FILTER = $par1->getAttribute ('filter');
 
   if ($FILTER)
@@ -88,11 +86,11 @@ sub makeParallel
       
       if ($opts{'type-bound-methods'})
         {
-          $prep->insertAfter ($_, $first) for (&s ("CALL $N%$opts{'method-prefix'}HOST ()"), &t ("\n"));
+          $prep->insertAfter ($_, $first) for (&s ("CALL $N%HOST ()"), &t ("\n"));
         }
       else
         {
-          $prep->insertAfter ($_, $first) for (&s ("CALL $opts{'method-prefix'}HOST ($N)"), &t ("\n"));
+          $prep->insertAfter ($_, $first) for (&s ("CALL HOST ($N)"), &t ("\n"));
         }
       
     }

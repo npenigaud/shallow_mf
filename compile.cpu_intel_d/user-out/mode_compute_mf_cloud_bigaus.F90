@@ -7,7 +7,6 @@
      MODULE MODE_COMPUTE_MF_CLOUD_BIGAUS
 
 !$ACDC singlecolumn
-!$ACDC bitrepro
 
 !    ###################################
 !

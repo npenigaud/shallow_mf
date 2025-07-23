@@ -7,7 +7,6 @@
      MODULE MODE_COMPUTE_UPDRAFT_RAHA
 
 !$ACDC singlecolumn --inline-contained
-!$ACDC bitrepro
 !    ###########################
 !
 IMPLICIT NONE

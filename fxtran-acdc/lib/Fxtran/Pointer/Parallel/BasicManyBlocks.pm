@@ -13,17 +13,40 @@ use strict;
 use Fxtran::Pointer::Parallel;
 use Fxtran;
 use Fxtran::Message;
-use Fxtran::ManyBlocks;
 
 sub makeParallel
 {
   shift;
-  my ($pu, $par1, $t, %opts) = @_;
+  my ($par1, $t, %opts) = @_;
 
-  my $style = $opts{style};
+  for my $stmt (&F ('.//ANY-stmt', $par1))
+    {
+      if ($stmt->nodeName eq 'a-stmt')
+        {
+          my %blocked;
 
-  my @nproma = $style->nproma (); my %nproma = map { ($_, 1) } @nproma;
+          for my $N (&F ('.//named-E/N', $stmt, 1))
+            {
+              my $s = $t->{$N};
+              $blocked{$N}++ if ($s->{blocked});
+            }
 
+          &Fxtran::Message::error 
+          (
+             "NPROMA blocked variables:\n\n" 
+           . join ("\n", map { " - $_\n" } sort keys (%blocked)) . "\n"
+           . "are used following statement is forbidden in a ManyBlocks section",
+           $stmt
+          ) if (%blocked);
+
+        }
+    }
+
+  my $style = $par1->getAttribute ('style') || 'IAL';
+  $style = 'Fxtran::Style'->new (style => $style);
+
+  my ($comp) = &F ('./comp', $par1);
+  
   my $FILTER = $par1->getAttribute ('filter');
 
   if (my $it = $style->customIterator ())
@@ -53,90 +76,33 @@ sub makeParallel
       $JBLKMIN = 'YDCPG_OPTS%JBLKMIN';
     }
 
-  my (%var2dim, %typearg);
-
-  while (my ($n, $s) = each (%$t))
-    {
-      if ($s->{isFieldAPI} && $s->{blocked})
-        {
-          $var2dim{$n} = $s->{nd};
-        }
-      elsif ($s->{constant} && $s->{arg})
-        {
-          $typearg{$n} = 1;
-        }
-    }
-
-  my $LDACC = $opts{acc} ? '.TRUE.' : '.FALSE.';
-
-  my %dims = (kgpblks => 'YDCPG_OPTS%KGPBLKS', nproma => 'YDCPG_OPTS%KLON', kidia => '1',
-              kfdia => "MIN ($KLON, $KGPTOT - ($KGPBLKS - 1) * $KLON)", jlon => $style->jlon (),
-              kidia_call => 'YDCPG_BNDS%KIDIA', kfdia_call => 'YDCPG_BNDS%KFDIA');
-  
-  my @par = &F ('.//parallel-section', $par1);
-
-  my %present;
-
-  for my $par (@par)
-    {
-      $par = &Fxtran::ManyBlocks::processSingleSection ($pu, $par, \%var2dim, \%typearg, \%dims, $LDACC, %opts);
-
-      for my $n (&F ('.//named-E/N', $par, 1))
-        {
-          $present{$n}++ if ($var2dim{$n} || $typearg{$n});
-        }
-    }
-
-  my ($comp) = &F ('./comp', $par1);
-
-  $comp->insertBefore ($_, $comp->firstChild) for (&s ("YLOFFSET = STACK (0, 0, 0, 0)"), &t ("\n"));
-
-  my $pragma = $opts{pragma};
-
-  if ($opts{acc} && %present)
-    {
-      $pragma->insertData ($comp, PRESENT => [sort keys (%present)]);
-    }
-
   my $LDACC = $opts{acc} ? &e ('.TRUE.') : &e ('.FALSE.');
-  my $YDOFFSET = &e ('YLOFFSET');
 
   for my $call (&F ('.//call-stmt', $comp))
     {
       my ($proc) = &F ('./procedure-designator/named-E/N/n/text()', $call);
 
-      next if ($proc->textContent eq 'ABOR1');
-      next if ($proc =~ m/$opts{'suffix-singlecolumn'}$/i);
+      next if ($proc eq 'ABOR1');
 
       $proc->setData ($proc->textContent . $opts{'suffix-manyblocks'});
       my ($argspec) = &F ('./arg-spec', $call);
-
       $argspec->appendChild (&t (','));
       $argspec->appendChild (&n ('<arg><arg-N><k>LDACC</k></arg-N>=' . $LDACC . '</arg>'));
 
-      if ($opts{'use-stack-manyblocks'})
-        {
-          $argspec->appendChild (&t (','));
-          $argspec->appendChild (&n ('<arg><arg-N><k>YDOFFSET</k></arg-N>=' . $YDOFFSET . '</arg>'));
-        }
-
       for my $arg (&F ('./arg/ANY-E', $argspec))
         {
-          my $argt = $arg->textContent;
-          my ($n) = &F ('./N', $arg, 1);
-
-          if ($argt eq 'YDCPG_BNDS%KFDIA')
+          if ($arg->textContent eq 'YDCPG_OPTS%KLON')
+            {
+              $argspec->insertAfter ($_, $arg->parentNode) 
+                for (&n ('<arg>' . &e ($KGPBLKS) . '</arg>'), &t (', '));
+              $arg->replaceNode (&e ($KLON));
+            }
+          elsif ($arg->textContent eq 'YDCPG_BNDS%KFDIA')
             {
               my $kfdia = "MIN ($KLON, $KGPTOT - ($KGPBLKS - 1) * $KLON)";
               $arg->replaceNode (&e ($kfdia));
             }
-          elsif ($n && $var2dim{$n} && (my ($sslt) = &F ('.//array-R/section-subscript-LT', $arg)))
-            {
-              $sslt->appendChild ($_) for (&t (','), &n ('<section-subscript>:</section-subscript>'));
-            }
         }
-
-      $argspec->appendChild ($_) for (&t (', '), &n ('<arg><arg-N><k>KGPBLKS</k></arg-N>=' . &e ($KGPBLKS) . '</arg>'));
 
     }
 

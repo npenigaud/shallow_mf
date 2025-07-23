@@ -1,8 +1,8 @@
 FCFLAGS=-qoverride-limits -convert big_endian -assume byterecl -align array64byte,all -traceback -fpic -qopenmp \
   -qopenmp-threadprivate compat -fp-model source -qopt-report=5 -qopt-report-phase=vec -ftz -diag-disable=remark,cpu-dispatch \
-  -g -O0 -march=core-avx2 -finline-functions -finline-limit=500 -Winline -qopt-prefetch=4 -fast-transcendentals -fimf-use-svml -no-fma -r8
+  -g -O2 -march=core-avx2 -finline-functions -finline-limit=500 -Winline -qopt-prefetch=4 -fast-transcendentals -fimf-use-svml -no-fma -r8
 
-CCFLAGS=-std=c++11 -O0 -no-fma -fpic -traceback -align
+CCFLAGS=-qoverride-limits -align -traceback -fpic -qopenmp -qopenmp -fp-model source -no-fma -g -O0 -fp-stack-check
 
 ARCH=cpu_intel_d
 LIBS=
@@ -18,8 +18,6 @@ FC=fxtran-f90 \
 boot: fxtran-acdc
 
 fxtran-acdc:
-	fxtran-boot --prefix fxtran-acdc\
-               --F90  "ifort $(FCFLAGS)"\
-               --CXX "icx $(CCFLAGS)"
+	fxtran-boot --prefix fxtran-acdc --  ifort $(FCFLAGS)
 
 CC=icc -qopenmp

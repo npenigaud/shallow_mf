@@ -27,7 +27,6 @@
 !!                BUCONF, TBUDGETS, KBUDGETS                            )
 
 !$ACDC singlecolumn --inline-contained
-!$ACDC bitrepro 
 
 !     #################################################################
 !!

@@ -6,7 +6,6 @@
      MODULE MODE_COMPUTE_FUNCTION_THERMO_MF
 
 !$ACDC singlecolumn
-!$ACDC bitrepro
 
 !    ######################################
 !

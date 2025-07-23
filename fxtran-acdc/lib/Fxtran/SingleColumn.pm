@@ -22,14 +22,16 @@ use Fxtran::Stack;
 use Fxtran::Loop;
 use Fxtran::ReDim;
 use Fxtran::Subroutine;
+use Fxtran::Module;
 use Fxtran::Call;
 use Fxtran::Canonic;
 use Fxtran::DrHook;
+use Fxtran::Dimension;
 use Fxtran::Include;
+use Fxtran::Inline;
 use Fxtran::Pointer;
 use Fxtran::Print;
 use Fxtran::Interface;
-use Fxtran::Module;
 
 
 sub arraySliceToAddress
@@ -196,7 +198,6 @@ sub processSingleInterface
     skip => sub { $opts{style}->noComputeRoutine (@_) },
     stack84 => $opts{stack84},
     style => $opts{style},
-    'stack-method' => $opts{'stack-method'},
   );
 
 }
@@ -205,21 +206,25 @@ sub processSingleRoutine
 {
   my ($pu, %opts) = @_;
 
-  # Process ABORT sections
-
-  for my $abort (&F ('.//abort-section', $pu))
-    {    
-      $_->unbindNode () for ($abort->childNodes ());
-      $abort->appendChild ($_) 
-        for (&s ('CALL ABOR1 ("ERROR: WRONG SETTINGS")'), &t ("\n"));
-    }    
-
   my $find = $opts{find};
 
   my @pointer;
 
   unless ($opts{dummy})
     {
+
+      for my $in (@{ $opts{inlined} })
+        {
+          my $f90in = $find->resolve (file => $in);
+          my $di = &Fxtran::parse (location => $f90in, fopts => [qw (-construct-tag -line-length 512 -canonic -no-include)], dir => $opts{tmp});
+          &Fxtran::Canonic::makeCanonic ($di, %opts);
+          &Fxtran::Inline::inlineExternalSubroutine ($pu, $di, %opts);
+        }
+      
+      if ($opts{'inline-contained'})
+        {
+          &Fxtran::Inline::inlineContainedSubroutines ($pu, find => $find, inlineDeclarations => 1, comment => $opts{'inline-comment'}, style => $opts{style});
+        }
      
       @pointer = &Fxtran::Pointer::setPointersDimensions ($pu, 'no-check-pointers-dims' => $opts{'no-check-pointers-dims'})
         if ($opts{'process-pointers'});
@@ -243,7 +248,7 @@ sub processSingleRoutine
       &Fxtran::Call::addSuffix 
       (
         $pu, 
-        suffix => $opts{'suffix-singlecolumn-called'}, 
+        suffix => $opts{'suffix-singlecolumn'}, 
         match => sub { ! $opts{style}->noComputeRoutine (@_) },
         'merge-interfaces' => $opts{'merge-interfaces'},
       );
@@ -258,7 +263,6 @@ sub processSingleRoutine
     stack84 => $opts{stack84},
     style => $opts{style},
     pointer => \@pointer,
-    'stack-method' => $opts{'stack-method'},
   );
 
   if ($opts{dummy})

@@ -44,11 +44,11 @@ sub requireUtilMod
 sub makeParallel
 {
   shift;
-  my ($pu, $par1, $t, %opts) = @_;
+  my ($par1, $t, %opts) = @_;
 
-  my $style = $par1->getAttribute ('style');
-  $style = $style ? 'Fxtran::Style'->new (style => $style) : $opts{style};
-
+  my $style = $par1->getAttribute ('style') || 'IAL';
+  $style = 'Fxtran::Style'->new (style => $style);
+  
   my $FILTER = $par1->getAttribute ('filter');
 
   &Fxtran::DIR::removeDIR ($par1);
@@ -124,8 +124,7 @@ EOF
           $do->insertBefore (&t ("\n"), $do_jlon);
           $do->insertBefore (&t ("\n"), $do_jlon);
 
-          &Fxtran::Stack::iniStackManyBlocks ($do_jlon, stack84 => $opts{stack84}, JBLKMIN => $JBLKMIN, 
-                                              KGPBLKS => $KGPBLKS, 'stack-method' => $opts{'stack-method'})
+          &Fxtran::Stack::iniStackManyBlocks ($do_jlon, stack84 => $opts{stack84}, JBLKMIN => $JBLKMIN, KGPBLKS => $KGPBLKS)
              if ($stackRequired);
 
           if ($style->customIterator ())

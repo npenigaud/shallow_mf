@@ -41,10 +41,10 @@ sub requireUtilMod
 
 sub setOpenMPDirective
 {
-  my ($par, $t, %opts) = @_;
+  my ($par, $t) = @_;
 
-  my $style = $par->getAttribute ('style');
-  $style = $style ? 'Fxtran::Style'->new (style => $style) : $opts{style};
+  my $style = $par->getAttribute ('style') || 'IAL';
+  $style = 'Fxtran::Style'->new (style => $style);
 
   my @priv = &Fxtran::Pointer::Parallel::getPrivateVariables ($par, $t);
 
@@ -59,7 +59,7 @@ sub setOpenMPDirective
     }
 
   my $C = &n ('<C>!$OMP PARALLEL DO PRIVATE (' .  join (', ', @priv)  . ')' . 
-              (@firstprivate ? ' FIRSTPRIVATE (' . join (', ', @firstprivate) . ')' : '') . 
+              (@firstprivate ? 'firstprivate (' . join (', ', @firstprivate) . ')' : '') . 
               '</C>');
   
   $do->parentNode->insertBefore ($C, $do);
@@ -70,10 +70,10 @@ sub setOpenMPDirective
 sub makeParallel
 {
   shift;
-  my ($pu, $par1, $t, %opts) = @_;
+  my ($par1, $t, %opts) = @_;
 
-  my $style = $par1->getAttribute ('style');
-  $style = $style ? 'Fxtran::Style'->new (style => $style) : $opts{style};
+  my $style = $par1->getAttribute ('style') || 'IAL';
+  $style = 'Fxtran::Style'->new (style => $style);
 
   my $FILTER = $par1->getAttribute ('filter');
 
@@ -140,8 +140,7 @@ EOF
           $do->insertBefore (&t ("\n"), $do_jlon);
           $do->insertBefore (&t ("\n"), $do_jlon);
 
-          &Fxtran::Stack::iniStackManyBlocks ($do_jlon, stack84 => $opts{stack84}, JBLKMIN => $JBLKMIN, 
-                                              KGPBLKS => $KGPBLKS, 'stack-method' => $opts{'stack-method'})
+          &Fxtran::Stack::iniStackManyBlocks ($do_jlon, stack84 => $opts{stack84}, JBLKMIN => $JBLKMIN, KGPBLKS => $KGPBLKS)
             if ($stackRequired);
           
           if ($style->customIterator ())
@@ -196,7 +195,7 @@ EOF
 
   &Fxtran::Print::useABOR1_ACC ($do_jlon);
 
-  &setOpenMPDirective ($par1, $t, %opts);
+  &setOpenMPDirective ($par1, $t);
 
   &Fxtran::ReDim::redimArguments ($par1) if ($opts{'redim-arguments'});
 

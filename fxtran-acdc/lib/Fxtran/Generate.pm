@@ -27,8 +27,6 @@ use Fxtran::NVTX;
 use Fxtran::Finder;
 use Fxtran::Style;
 use Fxtran::Pragma;
-use Fxtran::Cycle;
-use Fxtran::Inline;
 
 use click;
 
@@ -115,7 +113,6 @@ my %options= do
   merge-interfaces          -- Consider that single column interfaces and regular interfaces are in the same include file
   pragma=s                  -- Pragma (OpenACC or OpenMP)                                                                                   -- OpenACC
   stack84                   -- Use separate stacks for data types of sizes 4 and 8
-  stack-method              -- Use stack method instead of macros
   style=s                   -- Source code style (default: guess from file contents)
   redim-arguments           -- Transform 1D array arguments to scalars
   set-variables=s%          -- Apply variables values and simplify the code
@@ -135,10 +132,6 @@ my %options= do
   suffix-semiimplicit=s     -- Suffix for semi-implicit  routines                                                                           --  _SEMIIMPLICIT
   base                      -- Base directory for file search                                                                               -- .
   array-slice-to-address    -- Pass addresses of first array element instead of array slices
-  use-stack-manyblocks      -- Use stack allocation for manyblocks routines
-  method-prefix=s           -- Prefix for method names                                                         -- ACDC_
-  use-bit-repro-intrinsics  -- Use bit reproducible intrinsics
-  suffix-bitrepro=s         -- Suffix for bit-repro routines                                                   -- _BITREPRO
 EOF
 
   my @options;
@@ -184,7 +177,7 @@ sub routineToRoutineHead
   my $d = &Fxtran::parse (location => $F90, fopts => [qw (-line-length 5000 -no-include -no-cpp -construct-tag -canonic), @fopts], dir => $opts->{tmp});
 
   &Fxtran::Canonic::makeCanonic ($d, %$opts);
-
+  
   $opts->{style} = 'Fxtran::Style'->new (%$opts, document => $d);
 
   $opts->{pragma} = 'Fxtran::Pragma'->new (%$opts);
@@ -195,46 +188,6 @@ sub routineToRoutineHead
       'Fxtran::Generate::Checker'->$method ($d, %$opts)
     }
 
-
-  if ((scalar (@{ $opts->{inlined} || [] }) || $opts->{'inline-contained'}) && (! $opts->{dummy}))
-    {
-      &Fxtran::Include::loadContainedIncludes ($d, %$opts)
-        if ($opts->{'inline-contained'});
-
-      my $find = $opts->{find};
-
-      for my $pu (&F ('.//program-unit', $d))
-        {
-          my $stmt = $pu->firstChild;
-          next unless ($stmt->nodeName eq 'subroutine-stmt');
-
-          for my $in (@{ $opts->{inlined} || [] })
-            {   
-              my $f90in = $find->resolve (file => $in);
-              my $di = &Fxtran::parse (location => $f90in, fopts => [qw (-construct-tag -line-length 512 -canonic -no-include)], dir => $opts->{tmp});
-              &Fxtran::Canonic::makeCanonic ($di, %$opts);
-              &Fxtran::Inline::inlineExternalSubroutine ($pu, $di, %$opts);
-            }   
-
-          if ($opts->{'inline-contained'})
-            {
-              &Fxtran::Inline::inlineContainedSubroutines ($pu, skipDimensionCheck => 1, inlineDeclarations => 1, 
-                                                           comment => $opts->{'inline-comment'}, find => $find,
-                                                           style => $opts->{style});
-            }
-        }
-    }
-
-  if ($opts->{'use-bit-repro-intrinsics'})
-    {
-      for my $pu (&F ('.//program-unit', $d))
-        {
-          my $stmt = $pu->firstChild;
-          next unless ($stmt->nodeName eq 'subroutine-stmt');
-          &Fxtran::Intrinsic::makeBitReproducible ($pu, %$opts);
-        }
-    }
-  
   return ($d, $F90out);
 }
 
@@ -249,7 +202,7 @@ sub routineToRoutineTail
 }
 
 &click (<< "EOF");
-@options{qw (cycle dir only-if-newer merge-interfaces pragma stack84 stack-method style redim-arguments set-variables 
+@options{qw (cycle dir only-if-newer merge-interfaces pragma stack84 style redim-arguments set-variables 
              suffix-semiimplicit tmp value-attribute version inline-contained checker)}
   keep-drhook               -- Keep DrHook
   dummy                     -- Generate a dummy routine (strip all executable code)
@@ -302,31 +255,26 @@ sub semiimplicit
 }
 
 &click (<< "EOF");
-@options{qw (cycle dir only-if-newer merge-interfaces pragma stack84 stack-method style redim-arguments set-variables 
-             suffix-singlecolumn tmp value-attribute version inline-contained checker array-slice-to-address use-bit-repro-intrinsics)}
-  keep-drhook                  -- Keep DrHook
-  dummy                        -- Generate a dummy routine (strip all executable code)
-  inlined=s@                   -- List of routines to inline
-  inline-comment               -- Add a comment when inlining a routine
-  create-interface             -- Generate an interface file
-  process-interfaces           -- Transform interfaces into single column interfaces (used for MODI MESONH files)
-  no-check-pointers-dims=s@    -- List of pointer variables that should not be checked for their dimensions
-  process-pointers             -- Process pointers (change them to CRAY pointers
-  suffix-singlecolumn-called=s -- Suffix for singlecolumn routines called by routine being processed
+@options{qw (cycle dir only-if-newer merge-interfaces pragma stack84 style redim-arguments set-variables 
+             suffix-singlecolumn tmp value-attribute version inline-contained checker array-slice-to-address)}
+  keep-drhook               -- Keep DrHook
+  dummy                     -- Generate a dummy routine (strip all executable code)
+  inlined=s@                -- List of routines to inline
+  inline-comment            -- Add a comment when inlining a routine
+  create-interface          -- Generate an interface file
+  process-interfaces        -- Transform interfaces into single column interfaces (used for MODI MESONH files)
+  no-check-pointers-dims=s@ -- List of pointer variables that should not be checked for their dimensions
+  process-pointers          -- Process pointers (change them to CRAY pointers
 EOF
 sub singlecolumn
 {
   my ($opts, @args) = @_;
 
-  $opts->{'suffix-singlecolumn-called'} ||= $opts->{'suffix-singlecolumn'};
-
   &Fxtran::Util::loadModule ('Fxtran::SingleColumn');
 
   my ($F90) = @args;
 
-  my ($d, $F90out) = &routineToRoutineHead ($F90, 'singlecolumn', $opts, qw (-directive ACDC));
-
-  &Fxtran::Directive::parseDirectives ($d, name => 'ACDC');
+  my ($d, $F90out) = &routineToRoutineHead ($F90, 'singlecolumn', $opts);
 
   $opts->{style}->preProcessForOpenACC ($d, %$opts);
   
@@ -363,8 +311,8 @@ sub singlecolumn
 
 
 &click (<< "EOF");
-@options{qw (cycle dir tmp only-if-newer merge-interfaces pragma stack84 stack-method style redim-arguments ydcpg_opts checker suffix-manyblocks
-             suffix-singlecolumn suffix-pointerparallel version type-bound-methods types-constant-dir types-fieldapi-dir method-prefix use-stack-manyblocks)}
+@options{qw (cycle dir tmp only-if-newer merge-interfaces pragma stack84 style redim-arguments ydcpg_opts checker suffix-manyblocks
+             suffix-singlecolumn suffix-pointerparallel version type-bound-methods types-constant-dir types-fieldapi-dir)}
   base                            -- Base directory for file lookup
   contiguous-pointers             -- Add CONTIGUOUS attribute to pointer accessors
   files=s@                        -- List of files to be looked at for inlining
@@ -423,7 +371,7 @@ sub pointerparallel
 }
 
 &click (<< "EOF");
-@options{qw (cycle dir base tmp only-if-newer merge-interfaces pragma stack84 stack-method style 
+@options{qw (cycle dir base tmp only-if-newer merge-interfaces pragma stack84 style 
              suffix-singlecolumn suffix-singleblock version checker)}
   drhooktonvtx                    -- Change DrHook calls into NVTX calls
   inlined=s@                      -- List of routines to inline
@@ -469,11 +417,10 @@ sub singleblock
 }
 
 &click (<< "EOF");
-@options{qw (cycle dir base tmp only-if-newer merge-interfaces pragma stack84 stack-method style 
-             suffix-singlecolumn suffix-manyblocks version checker array-slice-to-address use-stack-manyblocks)}
+@options{qw (cycle dir base tmp only-if-newer merge-interfaces pragma stack84 style 
+             suffix-singlecolumn suffix-manyblocks version checker array-slice-to-address)}
   drhooktonvtx                    -- Change DrHook calls into NVTX calls
   inlined=s@                      -- List of routines to inline
-  create-interface                -- Generate an interface file
 EOF
 sub manyblocks
 {
@@ -507,15 +454,10 @@ sub manyblocks
     }
   
   &routineToRoutineTail ($F90out, $d, $opts);
-
-  if ($opts->{'create-interface'})
-    {
-      $opts->{style}->generateInterface ($F90out, %$opts);
-    }
 }
 
 &click (<< "EOF");
-@options{qw (dir pragma tmp type-bound-methods types-constant-dir types-fieldapi-dir checker method-prefix)}
+@options{qw (dir pragma tmp type-bound-methods types-constant-dir types-fieldapi-dir checker)}
   field-api                       -- Dump Field API information
   field-api-class=s               -- Field API structure category
   methods-list=s@                 -- List of methods (copy, crc64, host, legacy, load, save, size, wipe
@@ -528,7 +470,7 @@ sub manyblocks
   skip-types=s                    -- Skip these derived types
   sorted                          -- Sort files (with number prefix) in compilation order
   numbered-submodules             -- Do not generate submodules with full names, use numbers instead
-  split-util                      -- Split util module into several modules (one per method)
+  method-prefix=s                 -- Prefix for method names                                                         -- ACDC_
 EOF
 sub methods
 {
@@ -548,16 +490,9 @@ sub methods
 
   my ($F90) = @args;  
 
-  if ($opts->{'type-bound-methods'})
+  if ($opts->{'type-bound-methods'} && (&dirname ($F90) eq $opts->{dir}))
     {
-      if (&dirname ($F90) eq $opts->{dir})
-        {
-          die ("Dumping code in `$opts->{dir}` would overwrite `$F90'");
-        }
-    }
-  elsif ($opts->{dir} ne 'File::Spec'->rel2abs (&dirname ($F90)))
-    {
-      &copy ($F90, join ('/', $opts->{dir}, &basename ($F90)));
+      die ("Dumping code in `$opts->{dir}` would overwrite `$F90'");
     }
 
   ( -d $opts->{dir}) or &mkpath ($opts->{dir});
@@ -667,13 +602,10 @@ sub methods
     {
       &Fxtran::FieldAPI::Register::registerFieldAPI ($d, $opts);
     }
-
-
 }
 
 &click (<< "EOF");
-@options{qw (dir pragma tmp merge-interfaces suffix-singlecolumn suffix-singleblock suffix-pointerparallel suffix-manyblocks suffix-bitrepro
-             use-stack-manyblocks ydcpg_opts cycle)}
+@options{qw (dir pragma tmp merge-interfaces suffix-singlecolumn suffix-singleblock suffix-pointerparallel suffix-manyblocks ydcpg_opts)}
 EOF
 sub interface
 {
@@ -690,8 +622,6 @@ sub interface
   
   &Fxtran::Interface::intfbBody ($d);
 
-  'Fxtran::Cycle'->simplify ($d, %$opts);
-
   my %intfb;
   
   # Strip empty lines
@@ -701,7 +631,7 @@ sub interface
 
   &Fxtran::Util::loadModule ('Fxtran::Generate::Interface');
 
-  my @method = qw (singlecolumn singleblock pointerparallel manyblocks bitrepro);
+  my @method = qw (singlecolumn singleblock pointerparallel manyblocks);
 
   for my $method (@method)
     {
@@ -716,27 +646,6 @@ sub interface
     join ("\n", 'INTERFACE', map ({ $intfb{$_} } ('regular', @method)), 'END INTERFACE', '')
   );
 
-}
-
-&click (<< "EOF");
-@options{qw (use-bit-repro-intrinsics tmp cycle dir merge-interfaces inline-contained suffix-bitrepro)}
-  use-bit-repro-parens      -- Make sure additions are executed in the right order
-EOF
-sub bitrepro
-{
-  my ($opts, @args) = @_;
-
-  &Fxtran::Util::loadModule ('Fxtran::BitRepro');
-
-  my ($F90) = @args;
-
-  $opts->{'use-bit-repro-intrinsics'} = 0; # Avoid doing the processing twice
-
-  my ($d, $F90out) = &routineToRoutineHead ($F90, 'bitrepro', $opts);
-
-  &Fxtran::BitRepro::makeBitReproducible ($d, %$opts);
-
-  &routineToRoutineTail ($F90out, $d, $opts);
 }
 
 1;

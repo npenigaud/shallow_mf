@@ -6,7 +6,6 @@
 MODULE MODE_SHUMAN_MF
 
 !$ACDC singlecolumn 
-!$ACDC bitrepro
 !     ##################
 !
 IMPLICIT NONE

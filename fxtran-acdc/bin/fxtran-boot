@@ -28,7 +28,7 @@ use Fxtran::Util;
 use Fxtran::PATH;
 
 my %opts = qw (prefix .);
-my @opts_s = qw (prefix F90 CC CXX);
+my @opts_s = qw (prefix);
 my @opts_f = qw (help);
 
 &GetOptions
@@ -47,25 +47,19 @@ if ($opts{help})
     exit (0);
   }
 
-for my $comp (qw (F90 CC CXX))
-  {
-    next unless ($opts{$comp});
-    $opts{$comp} = [split (m/\s+/o, $opts{$comp})];
-  }
-
 $opts{prefix} = 'File::Spec'->rel2abs ($opts{prefix});
 
-my ($f90compiler, @f90flags) = $opts{F90} ? @{ $opts{F90} } : @ARGV;
-my ($ccompiler,   @cflags)   = @{ $opts{CC} || [] };
-my ($cxxcompiler, @cxxflags) = @{ $opts{CXX} || [] };
+for (qw (include lib))
+  {
+    &mkpath ("$opts{prefix}/$_") 
+      unless (-d "$opts{prefix}/$_");
+  }
+
+my ($f90compiler, @f90flags) = @ARGV;
 
 @f90flags = grep { $_ ne '-c' } @f90flags;
-@cflags   = grep { $_ ne '-c' } @cflags;
-@cxxflags = grep { $_ ne '-c' } @cxxflags;
 
 my @F90 = <$Bin/../src/*.F90>;
-my @C   = <$Bin/../src/*.c>;
-my @CXX = <$Bin/../src/*.cc>;
 
 my $dir = 'File::Temp'->newdir ();
 
@@ -75,32 +69,13 @@ chdir ($dir);
 (
   f90compiler => $f90compiler, 
   f90flags    => \@f90flags, 
+  lib         => "$opts{prefix}/lib/libACDC.a",
   F90         => \@F90,
-
-  ccompiler   => $ccompiler,
-  cflags      => \@cflags,
-  C           => \@C,
-
-  cxxcompiler => $cxxcompiler,
-  cxxflags    => \@cxxflags,
-  CXX         => \@CXX,
-
-  lib         => "libACDC.a",
 );
-
-for (qw (include lib))
-  {
-    &mkpath ("$opts{prefix}/$_") 
-      unless (-d "$opts{prefix}/$_");
-  }
-
-&move ('libACDC.a', "$opts{prefix}/lib/libACDC.a")
-  or die ("Cannot install libACDC.a");
 
 for (<*.mod>, <*.smod>, <$Bin/../src/*.h>)
   {
-    &copy ($_, "$opts{prefix}/include/" . &basename ($_))
-      or die ("Cannot install $_");
+    &copy ($_, "$opts{prefix}/include/" . &basename ($_));
   }
 
 

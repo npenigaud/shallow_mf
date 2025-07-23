@@ -9,7 +9,6 @@ package Fxtran::Util;
 use FileHandle;
 use File::Path;
 use File::Basename;
-use Data::Dumper;
 
 use strict;
 
@@ -77,7 +76,6 @@ EOF
 sub loadModule
 {
   my $module = shift;
-
   eval "use $module";
   my $c = $@;
   die ($c) if ($c);

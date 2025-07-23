@@ -42,17 +42,13 @@ sub parseDirectives
         {
           my $Cc = $C;
 
-          unless (@section)
-            {
-              die ("Unexpected `" . $Cc->textContent . "' in:\n" . $C->parentNode->textContent) 
-            }
+          die ("Unexpected " . $Cc->textContent) 
+            unless (@section);
   
           my ($Co, $e, $tag) = @{ pop @section };
 
-          unless ($Co->parentNode->unique_key == $Cc->parentNode->unique_key)
-            {
-              die ("Unexpected `" . $Cc->textContent . "' in:\n" . $C->parentNode->textContent);
-            }
+          die ("Unexpected " . $Cc->textContent) 
+            unless ($Co->parentNode->unique_key == $Cc->parentNode->unique_key);
           
           for my $n (&F ('following-sibling::node()', $Co))
             {
@@ -79,11 +75,6 @@ sub parseDirectives
             {
               my ($k, $v) = split (m/\s*=\s*/o, $s);
               $opts{$k} = $v;
-            }
-
-          if (grep { (! defined ($_)) || (m/^--/o) } %opts)
-            {
-              %opts = ();
             }
 
           my ($tag) = ($bdir =~ m/^(\w+)/o);

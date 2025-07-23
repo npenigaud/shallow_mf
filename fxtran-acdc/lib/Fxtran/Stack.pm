@@ -18,32 +18,22 @@ sub iniStackSingleBlock
 {
   my ($do_jlon, %opts) = @_;
 
-  if ($opts{'stack-method'})
+  if ($opts{stack84})
     {
-      die unless ($opts{stack84});
-      $do_jlon->insertAfter ($_, $do_jlon->firstChild)
-        for (&s ("YLSTACK = stack_init (YLSTACK, 1, 1)"), &t ("\n"));
-       
+      for my $size (4, 8)
+        {
+          $do_jlon->insertAfter (&s ("YLSTACK%U${size} = stack_u${size} (YSTACK, 1, 1)"), $do_jlon->firstChild);
+          $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
+          $do_jlon->insertAfter (&s ("YLSTACK%L${size} = stack_l${size} (YSTACK, 1, 1)"), $do_jlon->firstChild);
+          $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
+        }
     }
   else
     {
-      if ($opts{stack84})
-        {
-          for my $size (4, 8)
-            {
-              $do_jlon->insertAfter (&s ("YLSTACK%U${size} = stack_u${size} (YSTACK, 1, 1)"), $do_jlon->firstChild);
-              $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
-              $do_jlon->insertAfter (&s ("YLSTACK%L${size} = stack_l${size} (YSTACK, 1, 1)"), $do_jlon->firstChild);
-              $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
-            }
-        }
-      else
-        {
-          $do_jlon->insertAfter (&s ("YLSTACK%U = stack_u (YSTACK, 1, 1)"), $do_jlon->firstChild);
-          $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
-          $do_jlon->insertAfter (&s ("YLSTACK%L = stack_l (YSTACK, 1, 1)"), $do_jlon->firstChild);
-          $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
-        }
+      $do_jlon->insertAfter (&s ("YLSTACK%U = stack_u (YSTACK, 1, 1)"), $do_jlon->firstChild);
+      $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
+      $do_jlon->insertAfter (&s ("YLSTACK%L = stack_l (YSTACK, 1, 1)"), $do_jlon->firstChild);
+      $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
     }
 
 
@@ -53,36 +43,24 @@ sub iniStackManyBlocks
 {
   my ($do_jlon, %opts) = @_;
 
-  my ($JBLKMIN, $KGPBLKS, $YDOFFSET) = @opts{qw (JBLKMIN KGPBLKS YDOFFSET)};
+  my ($JBLKMIN, $KGPBLKS) = @opts{qw (JBLKMIN KGPBLKS)};
 
-  if ($opts{'stack-method'})
+  if ($opts{stack84})
     {
-      next unless ($opts{stack84});
-      my $ydoffset = $YDOFFSET ? ", $YDOFFSET" : "";
-      $do_jlon->insertAfter ($_, $do_jlon->firstChild)
-        for (&s ("YLSTACK = stack_init (YLSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS$ydoffset)"), &t ("\n"));
+      for my $size (4, 8)
+        {
+          $do_jlon->insertAfter (&s ("YLSTACK%U${size} = stack_u${size} (YSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS)"), $do_jlon->firstChild);
+          $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
+          $do_jlon->insertAfter (&s ("YLSTACK%L${size} = stack_l${size} (YSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS)"), $do_jlon->firstChild);
+          $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
+        }
     }
   else
     {
-      if ($opts{stack84})
-        {
-          for my $size (4, 8)
-            {
-              my $base = $YDOFFSET ? '_base' : ''; my $ydoffset = $YDOFFSET ? ", $YDOFFSET" : "";
-              $do_jlon->insertAfter (&s ("YLSTACK%U${size} = stack_u${size}${base} (YSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS$ydoffset)"), $do_jlon->firstChild);
-              $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
-              $do_jlon->insertAfter (&s ("YLSTACK%L${size} = stack_l${size}${base} (YSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS$ydoffset)"), $do_jlon->firstChild);
-              $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
-            }
-        }
-      else
-        {
-          my $base = $YDOFFSET ? '_base' : ''; my $ydoffset = $YDOFFSET ? ", $YDOFFSET" : "";
-          $do_jlon->insertAfter (&s ("YLSTACK%U = stack_u${base} (YSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS$ydoffset)"), $do_jlon->firstChild);
-          $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
-          $do_jlon->insertAfter (&s ("YLSTACK%L = stack_l${base} (YSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS$ydoffset)"), $do_jlon->firstChild);
-          $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
-        }
+      $do_jlon->insertAfter (&s ("YLSTACK%U = stack_u (YSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS)"), $do_jlon->firstChild);
+      $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
+      $do_jlon->insertAfter (&s ("YLSTACK%L = stack_l (YSTACK, (JBLK-$JBLKMIN)+1, $KGPBLKS)"), $do_jlon->firstChild);
+      $do_jlon->insertAfter (&t ("\n"), $do_jlon->firstChild);
     }
 
 
@@ -184,12 +162,7 @@ sub addStack
       
           if (! grep { $n eq $_ } @pointer)
             {
-              if ($opts{stack84} && $opts{'stack-method'})
-                {
-                 $ep->insertBefore (&t ("\n"), $ep->firstChild);
-                 $ep->insertBefore (&s ("stack_alloc ($n)"), $ep->firstChild);
-                }
-              elsif ($opts{stack84})
+              if ($opts{stack84})
                 {
                   my ($if) = &fxtran::parse (fragment => << "EOF");
 IF (KIND ($n) == 8) THEN

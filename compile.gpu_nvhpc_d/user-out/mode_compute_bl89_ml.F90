@@ -1,7 +1,6 @@
 MODULE MODE_COMPUTE_BL89_ML
 
 !$ACDC singlecolumn
-!$ACDC bitrepro
 
 IMPLICIT NONE
 CONTAINS

@@ -13,7 +13,6 @@ use File::Temp;
 use File::Basename;
 use File::Spec;
 use File::Copy;
-use File::Path;
 use Cwd;
 
 use FindBin qw ($Bin);
@@ -59,13 +58,13 @@ sub runACDCMethod
             }
           push @optsfile, $opt if ($ok);
         }
-
+     
       my $tmp =  'File::Temp'->newdir (CLEANUP => ! $opts->{debug});
-
+     
       my @cmd = ("fxtran-gen", $opts->{package}, $method, 
                  'click'->hashToCommandLine (package => $opts->{package}, method => $method, opts => $opts),
                  '--tmp' => "$tmp", @optsfile, @I, $F90);
-
+     
       &Fxtran::Util::runCommand (cmd => \@cmd, %$opts);
     }
 
@@ -190,11 +189,6 @@ for (my $i = 0; $i < scalar (@ARGV); $i++)
         push @argv, '-I' . 'File::Spec'->rel2abs ($ARGV[$i+1]);
         $i++;
       }
-    elsif ($ARGV[$i] eq '-module')
-      {
-        push @argv, $ARGV[$i], 'File::Spec'->rel2abs ($ARGV[$i+1]);
-        $i++;
-      }
     elsif (my ($inc) = ($ARGV[$i] =~ m/^-I(.*)$/o))
       {
         push @argv, '-I' . 'File::Spec'->rel2abs ($inc);
@@ -224,10 +218,9 @@ my $tmp = delete $opts{tmp}; $tmp = undef if ($tmp && ($tmp eq '.'));
 
 FILE: for my $F90 (@F90)
   {
-
     if ($tmp)
       {
-        $dir = 'File::Temp'->newdir (CLEANUP => 0);
+        $dir = 'File::Temp'->newdir (CLEANUP => ! $opts{debug}, DIR => $opts{tmp});
       }
 
     chdir ($dir);
@@ -270,28 +263,23 @@ FILE: for my $F90 (@F90)
           cwd => $cwd, 
           ACDC => \@ACDC,
         );
-      }
-    else
-      {
-        &Fxtran::F90Compiler::run 
-        (
-          f90compiler => $f90compiler, 
-          f90flags    => \@f90flags, 
-          obj         => $obj, 
-          F90         => [$F90], 
-          %opts
-        );
+
+        next FILE;
       }
 
-    for my $mod (<*.mod>, <*.smod>)
-      {
-        &move ($mod, "$cwd/$mod");
-      }
+NORMAL:
 
-
-    chdir ($cwd);
-
-    &rmtree ($dir) if ($tmp && (! $opts{debug}));
-
+    &Fxtran::F90Compiler::run 
+    (
+      f90compiler => $f90compiler, 
+      f90flags    => \@f90flags, 
+      obj         => $obj, 
+      F90         => [$F90], 
+      %opts
+    );
   }
 
+for my $mod (<*.mod>, <*.smod>)
+  {
+    &move ($mod, "$cwd/$mod");
+  }

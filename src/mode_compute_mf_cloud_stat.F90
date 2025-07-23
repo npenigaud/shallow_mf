@@ -6,7 +6,6 @@
      MODULE MODE_COMPUTE_MF_CLOUD_STAT
 
 !$ACDC singlecolumn
-!$ACDC bitrepro 
 
 !    ############################
 !

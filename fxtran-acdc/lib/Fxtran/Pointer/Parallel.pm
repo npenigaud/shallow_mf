@@ -24,6 +24,7 @@ use Fxtran::Finder;
 use Fxtran::Include;
 use Fxtran::Bt;
 use Fxtran::Canonic;
+use Fxtran::Inline;
 use Fxtran::Style;
 use Fxtran::Style::IAL;
 use Fxtran::Style::MESONH;
@@ -32,7 +33,7 @@ use Fxtran::Util;
 
 sub processSingleParallel
 {
-  my ($pu, $parallel, $ipar, $NAME, $t, $find, $types, $puseUtilMod, %opts) = @_;
+  my ($parallel, $ipar, $NAME, $t, $find, $types, $puseUtilMod, %opts) = @_;
 
   my $target = $parallel->getAttribute ('target');
 
@@ -73,7 +74,7 @@ EOF
       my $parallel1 = $parallel->cloneNode (1);
 
       $parallel{$onlySimpleFields}{$addBlockIndex} ||= 
-        &Fxtran::Pointer::Parallel::makeParallel ($pu, $parallel1, $t, $find, $types, "$NAME:$name", $opts{'post-parallel'}, $onlySimpleFields, $addBlockIndex);
+        &Fxtran::Pointer::Parallel::makeParallel ($parallel1, $t, $find, $types, "$NAME:$name", $opts{'post-parallel'}, $onlySimpleFields, $addBlockIndex);
 
       $$puseUtilMod ||= $class->requireUtilMod ();
     }
@@ -99,7 +100,7 @@ EOF
 
       $parallel1 = $parallel1->cloneNode (1);
 
-      $parallel1 = $class->makeParallel ($pu, $parallel1, $t, %opts);
+      $parallel1 = $class->makeParallel ($parallel1, $t, %opts);
       
       my $block;
       if ($itarget == 0)
@@ -159,6 +160,21 @@ sub processSingleRoutine
   
   &Fxtran::Subroutine::rename ($pu, sub { return $_[0] . uc ($opts{'suffix-pointerparallel'}) });
   
+  # Prepare the code
+  
+  for my $in (@{ $opts{inlined} })
+    {
+      my $f90in = $find->resolve (file => $in);
+      my $di = &Fxtran::parse (location => $f90in, fopts => [qw (-construct-tag -line-length 512 -canonic -no-include)], dir => $opts{tmp});
+      &Fxtran::Canonic::makeCanonic ($di, %opts);
+      &Fxtran::Inline::inlineExternalSubroutine ($pu, $di, %opts);
+    }
+      
+  if ($opts{'inline-contained'})
+    {
+      &Fxtran::Inline::inlineContainedSubroutines ($pu, skipDimensionCheck => 1);
+    }
+
   # Add modules
   
   my @use = qw (FIELD_MODULE FIELD_FACTORY_MODULE FIELD_ACCESS_MODULE YOMPARALLELMETHOD STACK_MOD YOMHOOK);
@@ -181,7 +197,6 @@ sub processSingleRoutine
     'REAL(KIND=JPHOOK) :: ZHOOK_HANDLE_PARALLEL',
     'REAL(KIND=JPHOOK) :: ZHOOK_HANDLE_COMPUTE',
     'TYPE(STACK) :: YLSTACK',
-    'TYPE(STACK) :: YLOFFSET',
   );
   
   my $t = &Fxtran::Pointer::SymbolTable::getSymbolTable 
@@ -304,7 +319,7 @@ sub processSingleRoutine
   
   for my $ipar (0 .. $#parallel)
     {
-      &processSingleParallel ($pu, $parallel[$ipar], $ipar, $NAME, $t, $find, 
+      &processSingleParallel ($parallel[$ipar], $ipar, $NAME, $t, $find, 
                               $types, \$useUtilMod, %opts);
     }
   
@@ -344,10 +359,7 @@ sub processSingleRoutine
   
   for my $style (qw (Fxtran::Style::IAL Fxtran::Style::MESONH))
     {
-      for my $suffix (@opts{qw (suffix-singlecolumn suffix-manyblocks)})
-        {
-          $style->setOpenACCInterfaces ($pu, %opts, suffix => $suffix);
-        }
+      $style->setOpenACCInterfaces ($pu, %opts, suffix => $opts{'suffix-singlecolumn'});
     }
   
   if (@parallel)
@@ -775,6 +787,10 @@ sub replaceObjectExprByPointerExpr
                 {
                   &addExtraIndex ($expr, &e ('JBLK'), $s) 
                 }
+              else
+                {
+                  &addExtraIndex ($expr, &t (':'), $s) 
+                }
             }
           else # Workaround for PGI bug : add (:,:,:) to avoid PGI error (non contiguous array)
             {
@@ -797,7 +813,7 @@ sub replaceObjectExprByPointerExpr
 
 sub makeParallel
 {
-  my ($pu, $par, $t, $find, $types, $NAME, $POST, $onlysimplefields, $blockLoop) = @_;
+  my ($par, $t, $find, $types, $NAME, $POST, $onlysimplefields, $blockLoop) = @_;
 
   my %POST = map { ($_, 1) } grep { $_ } @$POST;
 
