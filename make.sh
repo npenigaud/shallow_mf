@@ -1,14 +1,15 @@
 #!/bin/bash
 
-#fxtran-makemaker --SRC=../src
+#source make.sh from shallow_mf directory
+
+export BITREPCPP11=1
 
 INTELONEAPI="intel/oneapi/2023.2"
 COMPILER="compiler/2023.2.0"
 module load $INTELONEAPI    
 module load $COMPILER 
-module load gcc/9.2.0 
+module load gcc/9.2.0
+module load nvhpc/24.5 
 
-##export PATH=~marguina/fxtran-acdc/checker/bin:$PATH ; export PATH=~marguina/fxtran/master/bin:$PATH
-export PATH=~/shallow_mf/fxtran-acdc/bin:$PATH ; export PATH=~/shallow_mf/fxtran/bin:$PATH
-
+export PATH="$PWD/fxtran-acdc/bin":$PATH ; export PATH="$PWD/fxtran/bin":$PATH 
 

@@ -6,6 +6,7 @@
      MODULE MODE_COMPUTE_FUNCTION_THERMO_MF
 
 !$ACDC singlecolumn
+!$ACDC bitrepro
 
 !    ######################################
 !
@@ -163,7 +164,7 @@ IF ( KRRL >= 1 ) THEN
       !*      Saturation vapor pressure with respect to water
       !
       ZE(JIJ, JK) =  EXP(CST%XALPW - CST%XBETAW/PT(JIJ, JK) - &
-                                            &CST%XGAMW*ALOG( PT(JIJ, JK) ) )
+                                            &CST%XGAMW*LOG( PT(JIJ, JK) ) )
       !
       !*      Saturation  mixing ratio with respect to water
       !
@@ -212,7 +213,7 @@ IF ( KRRL >= 1 ) THEN
         !*      Saturation vapor pressure with respect to ice
         !
         ZE(JIJ, JK) =  EXP(CST%XALPI - CST%XBETAI/PT(JIJ, JK) - &
-                                              &CST%XGAMI*ALOG( PT(JIJ, JK) ) )
+                                              &CST%XGAMI*LOG( PT(JIJ, JK) ) )
         !
         !*      Saturation  mixing ratio with respect to ice
         !

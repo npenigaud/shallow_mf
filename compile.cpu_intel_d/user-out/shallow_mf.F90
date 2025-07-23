@@ -27,6 +27,7 @@
 !!                BUCONF, TBUDGETS, KBUDGETS                            )
 
 !$ACDC singlecolumn --inline-contained
+!$ACDC bitrepro 
 
 !     #################################################################
 !!
@@ -171,9 +172,8 @@ REAL, DIMENSION(D%NIJT,D%NKT), INTENT(OUT) ::  PDETR     ! updraft detrainment
 REAL, DIMENSION(D%NIJT,D%NKT), INTENT(OUT) ::  PENTR     ! updraft entrainment
 INTEGER,DIMENSION(D%NIJT),     INTENT(OUT) :: KKLCL,KKETL,KKCTL ! level of LCL,ETL and CTL
 REAL,                          INTENT(IN)  :: PDX, PDY
-REAL, DIMENSION(D%NIJT,D%NKT,KSV),      INTENT(IN),    OPTIONAL :: PRSVS ! sources of sv (for Budgets with lagrangian tracer)
-REAL,DIMENSION(JPSVMAX),                INTENT(IN),    OPTIONAL :: PSVMIN       ! minimum value for SV variables (for Budgets)
-!!TYPE(TBUDGETCONF_t),                    INTENT(IN),    OPTIONAL :: BUCONF       ! budget structure
+REAL, INTENT (IN), OPTIONAL::PRSVS(D%NIJT, D%NKT, KSV)
+REAL, INTENT (IN), OPTIONAL::PSVMIN(JPSVMAX)
 !!TYPE(TBUDGETDATA_PTR), DIMENSION(KBUDGETS), INTENT(INOUT), OPTIONAL :: TBUDGETS
 INTEGER,                                INTENT(IN)              :: KBUDGETS     ! option. because not used in arpifs
 
@@ -240,7 +240,7 @@ DO JK=1, IKT
   END DO
 END DO
 
-CALL COMPUTE_FRAC_ICE(CST, NEBN%CFRAC_ICE_SHALLOW_MF,NEBN,ZFRAC_ICE,ZWK, IERR)
+CALL COMPUTE_FRAC_ICE(CST, NEBN%CFRAC_ICE_SHALLOW_MF,NEBN,ZFRAC_ICE(:,:),ZWK(:,:), IERR(:,:))
 
 ! Conservative variables at t-dt
 CALL THL_RT_FROM_TH_R_MF(D, CST, KRR,KRRL,KRRI,    &
@@ -332,7 +332,8 @@ DO JK=1, IKT
   END DO
 END DO
 
-IF ( PARAMMF%XIMPL_MF > 1.E-10 ) THEN  
+IF ( PARAMMF%XIMPL_MF > 1.E-10 ) THEN 
+
   CALL MF_TURB(D, KSV, PARAMMF, &
              ONOMIXLG,KSV_LGBEG,KSV_LGEND,                            &
              PTSTEP, PDZZ, PRHODJ, &
@@ -342,6 +343,7 @@ IF ( PARAMMF%XIMPL_MF > 1.E-10 ) THEN
              PFLXZTHMF,PFLXZTHVMF,PFLXZRMF,PFLXZUMF,PFLXZVMF,         &
              ZFLXZSVMF,PFLXZTKEMF,PFRAC_UP                            )
 ELSE
+
   CALL MF_TURB_EXPL(D, PARAMMF,                                        &
          PRHODJ,ZTHLM,ZTHVM,ZRTM,PUM,PVM,PTKEM,                        &
          PDTHLDT_MF,PDRTDT_MF,PDUDT_MF,PDVDT_MF,PDTKEDT_MF,            &

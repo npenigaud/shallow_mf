@@ -6,6 +6,7 @@
      MODULE MODE_COMPUTE_MF_CLOUD_DIRECT
 
 !$ACDC singlecolumn
+!$ACDC bitrepro
 
 !    ###################################
 !

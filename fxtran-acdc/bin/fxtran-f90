@@ -1,0 +1,297 @@
+#!/usr/bin/perl -w
+
+#
+# Copyright 2025 Meteo-France
+# All rights reserved
+# philippe.marguinaud@meteo.fr
+#
+
+use Getopt::Long;
+use FileHandle;
+use Data::Dumper;
+use File::Temp;
+use File::Basename;
+use File::Spec;
+use File::Copy;
+use File::Path;
+use Cwd;
+
+use FindBin qw ($Bin);
+use lib "$Bin/../lib";
+
+use strict;
+
+use Fxtran::Common;
+use Fxtran::Bt;
+use Fxtran::F90Compiler;
+use Fxtran::Util;
+use Fxtran::PATH;
+
+sub runACDCMethod
+{
+  my %args = @_;
+
+  my ($opts, $obj, $F90) = @args{qw (opts obj F90)};
+
+  my @f90flags = @{ $args{f90flags} };
+
+  my @I = grep { m/^-I/o } @f90flags;
+
+
+  for my $ACDC (@{ $args{ACDC} })
+    {
+      $ACDC =~ s/^(\w+)\s*//o;
+      my $method = $1;
+     
+      my $hopts = 'click'->getOptionList (package => $opts->{package}, method => $method);
+     
+      my ($ok, @optsfile);
+     
+      for my $opt (map { m/^(--[\w-]+)=(.*)$/o ? ($1, $2) : ($_) } split (m/\s+/o, $ACDC))
+        {
+          if ($opt =~ m/^--([\w-]+)$/o)
+            {
+              my $k = $1;
+              $ok = exists ($hopts->{"$k=s"}) 
+                 || exists ($hopts->{"$k!"}) 
+                 || (($k =~ s/^no//o) && exists ($hopts->{"$k!"})) 
+                 || 0;
+            }
+          push @optsfile, $opt if ($ok);
+        }
+
+      my $tmp =  'File::Temp'->newdir (CLEANUP => ! $opts->{debug});
+
+      my @cmd = ("fxtran-gen", $opts->{package}, $method, 
+                 'click'->hashToCommandLine (package => $opts->{package}, method => $method, opts => $opts),
+                 '--tmp' => "$tmp", @optsfile, @I, $F90);
+
+      &Fxtran::Util::runCommand (cmd => \@cmd, %$opts);
+    }
+
+  &Fxtran::F90Compiler::compile (%args);
+}
+
+my ($package, $config, $iconfig) = ('generate');
+
+# Look for config
+
+for (my $i = 0; $i < $#ARGV; $i++)
+  {
+    last if ($ARGV[$i] eq '--');
+    next unless ($ARGV[$i] eq '--config');
+    $iconfig = $i;
+    $config = $ARGV[$i+1];
+    last;
+  }
+
+if ($config)
+  {
+    die ("Configution file `$config' was not found") 
+      unless (-f $config);
+    $config = 'File::Spec'->rel2abs ($config);
+    $config = do ("$config");
+    if (my $c = $@)
+      {
+        die ($c);
+      }
+
+# Insert config arguments in place of config options
+
+    @ARGV = (@ARGV[0..$iconfig-1], @$config, @ARGV[$iconfig+2..$#ARGV]);
+  }
+
+# Look for package
+
+for (my $i = 0; $i < $#ARGV; $i++)
+  {
+    last if ($ARGV[$i] eq '--');
+    next unless ($ARGV[$i] eq '--package');
+    $package = $ARGV[$i+1];
+    last;
+  }
+
+$package = 'Fxtran::' . ucfirst ($package) 
+  unless ($package =~ m/::/o);
+
+my %opts = (package => $package, config => $config);
+
+&Fxtran::Util::loadModule ($package);
+
+my $hopts = 'click'->getOptionList (package => $package);
+
+my @opts_f = qw (dryrun debug);
+my @opts_s = qw (package method config user-directory-in user-directory-out prefix);
+
+&GetOptions
+(
+  (map
+  {
+    my $key = my $opt = $_; 
+    $key =~ s/(?:=s|\!)$//o;
+    $opts{$key} = $hopts->{$key};
+    ($opt, \$opts{$key})
+  }
+  keys (%$hopts)),
+  (map { ($_, \$opts{$_}) } @opts_f),
+  (map { ("$_=s", \$opts{$_}) } @opts_s),
+);
+
+for (qw (user-directory-in user-directory-out))
+  {
+    $opts{$_} = 'File::Spec'->rel2abs ($opts{$_})
+     if ($opts{$_});
+  }
+
+$opts{package} = 'Fxtran::' . ucfirst ($opts{package}) 
+  unless ($opts{package} =~ m/::/o);
+
+if ($opts{help})
+  {
+    print
+     "Usage: " . &basename ($0) . "\n" .
+      join ('', map { "  --$_\n" } @opts_f) .
+      join ('', map { "  --$_=...\n" } @opts_f) .
+     "\n";
+    exit (0);
+  }
+
+my $f90compiler = shift (@ARGV);
+
+my $c = grep { $_ eq '-c' } @ARGV;
+
+
+if ($opts{prefix})
+  {
+    unshift (@ARGV, "-I$opts{prefix}/include");
+    push (@ARGV, "-L$opts{prefix}/lib", '-lACDC');
+  }
+
+unless ($c)
+  {
+    exec ($f90compiler, @ARGV) 
+      unless ($opts{dryrun});
+    exit (0);
+  }
+
+# Absolute path for includes
+
+my (@argv, $output);
+
+for (my $i = 0; $i < scalar (@ARGV); $i++)
+  {
+    if ($ARGV[$i] eq '-o')
+      {
+        $output = 'File::Spec'->rel2abs ($ARGV[$i+1]);
+        $i++;
+      }
+    elsif ($ARGV[$i] eq '-I')
+      {
+        push @argv, '-I' . 'File::Spec'->rel2abs ($ARGV[$i+1]);
+        $i++;
+      }
+    elsif ($ARGV[$i] eq '-module')
+      {
+        push @argv, $ARGV[$i], 'File::Spec'->rel2abs ($ARGV[$i+1]);
+        $i++;
+      }
+    elsif (my ($inc) = ($ARGV[$i] =~ m/^-I(.*)$/o))
+      {
+        push @argv, '-I' . 'File::Spec'->rel2abs ($inc);
+      }
+    else
+      {
+        push @argv, $ARGV[$i];
+      }
+  }
+
+@ARGV = @argv;
+
+my @F90 = grep { m/\.(?:F90|F)$/io } @ARGV;
+my @f90flags = grep { ! m/\.(?:F90|F)$/io } @ARGV;
+
+if ((scalar (@F90) > 1) && ($output))
+  {
+    die ("Cannot specify -o with -c and multiple files");
+  }
+
+my $cwd = &cwd ();
+
+unshift (@f90flags, "-I$cwd");
+
+my $dir = (delete $opts{dir}) || '.'; 
+my $tmp = delete $opts{tmp}; $tmp = undef if ($tmp && ($tmp eq '.'));
+
+FILE: for my $F90 (@F90)
+  {
+
+    if ($tmp)
+      {
+        $dir = 'File::Temp'->newdir (CLEANUP => 0);
+      }
+
+    chdir ($dir);
+
+    $F90 = 'File::Spec'->rel2abs ($F90, $cwd);
+
+    my $obj = $output;
+
+    unless ($obj)
+      {
+        ($obj = &basename ($F90)) =~ s/\.(?:F90|F)$/.o/io;
+        $obj = 'File::Spec'->rel2abs ($obj, $cwd);
+      }
+
+    (-f $F90) or die ("File `$F90' does not exist");
+
+    my @text = do { my $fh = 'FileHandle'->new ("<$F90"); <$fh> };
+
+    my @ACDC;
+
+    if ($opts{method})
+      {
+        @ACDC = ($opts{method});
+      }
+    else
+      {
+        @ACDC = grep { (! m/\{\s*$/o) && (! m/\}\s*$/o) && (! m/\&\s*$/o) && (! m/^(?:BEGIN|END)\s+/o) }
+                map { m/^\!\$ACDC (\S.*)$/o ? ($1) : () } @text;
+      }
+
+    if (@ACDC)
+      {
+        &runACDCMethod
+        (
+          f90compiler => $f90compiler, 
+          f90flags => ['-I' . &dirname ($F90), @f90flags],  # Look for includes near current file
+          obj => $obj, 
+          F90 => $F90, 
+          opts => \%opts,
+          cwd => $cwd, 
+          ACDC => \@ACDC,
+        );
+      }
+    else
+      {
+        &Fxtran::F90Compiler::run 
+        (
+          f90compiler => $f90compiler, 
+          f90flags    => \@f90flags, 
+          obj         => $obj, 
+          F90         => [$F90], 
+          %opts
+        );
+      }
+
+    for my $mod (<*.mod>, <*.smod>)
+      {
+        &move ($mod, "$cwd/$mod");
+      }
+
+
+    chdir ($cwd);
+
+    &rmtree ($dir) if ($tmp && (! $opts{debug}));
+
+  }
+

@@ -7,7 +7,7 @@
      MODULE MODE_COMPUTE_MF_CLOUD
 
 !$ACDC singlecolumn
-
+!$ACDC bitrepro 
 !    ############################
 !
 IMPLICIT NONE
