@@ -2,6 +2,7 @@
      MODULE MODI_SHALLOW_MF
 
 !$ACDC singlecolumn --process-interfaces
+!$ACDC bitrepro
 
 !    ######################
 !
@@ -106,10 +107,8 @@ REAL, DIMENSION(D%NIJT,D%NKT), INTENT(OUT) ::  PDETR     ! updraft detrainment
 REAL, DIMENSION(D%NIJT,D%NKT), INTENT(OUT) ::  PENTR     ! updraft entrainment
 INTEGER,DIMENSION(D%NIJT),     INTENT(OUT) :: KKLCL,KKETL,KKCTL ! level of LCL,ETL and CTL
 REAL,                          INTENT(IN)  :: PDX, PDY
-REAL, DIMENSION(D%NIJT,D%NKT,KSV),      INTENT(IN),    OPTIONAL :: PRSVS ! sources of sv (for Budgets with lagrangian tracer)
-REAL,DIMENSION(JPSVMAX),                INTENT(IN),    OPTIONAL :: PSVMIN       ! minimum value for SV variables (for Budgets)
-!!TYPE(TBUDGETCONF_t),                    INTENT(IN),    OPTIONAL :: BUCONF       ! budget structure
-!!TYPE(TBUDGETDATA_PTR), DIMENSION(KBUDGETS), INTENT(INOUT), OPTIONAL :: TBUDGETS
+REAL, INTENT (IN), OPTIONAL::PRSVS(D%NIJT, D%NKT, KSV)
+REAL, INTENT (IN), OPTIONAL::PSVMIN(JPSVMAX)
 INTEGER,                                INTENT(IN)              :: KBUDGETS     ! option. because not used in arpifs
 
 END SUBROUTINE SHALLOW_MF

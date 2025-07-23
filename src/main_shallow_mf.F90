@@ -215,7 +215,7 @@ CALL GET_TIME (TSC)
 DO ITIME = 1, NTIME
 
   IF (TRIM (CLMETHOD) == 'openmp') THEN
- 
+
 !$OMP PARALLEL DO PRIVATE (JBLK)
     DO JBLK = 1, NGPBLKS
       CALL SHALLOW_MF( &
@@ -244,12 +244,47 @@ DO ITIME = 1, NTIME
        &  KBUDGETS=KBUDGETS                            )
     ENDDO
 
-  ELSEIF (TRIM (CLMETHOD) == 'openmpsinglecolumn') THEN
+  ELSEIF (TRIM (CLMETHOD) == 'openmp_bitrepro') THEN
+ 
+!!$OMP PARALLEL DO PRIVATE (JBLK)
+!!$OMP SINGLE PRIVATE(JBLK)
+    DO JBLK = 1, NGPBLKS
+!      write (0,*) "AFFICHAGE : bloc numero ",JBLK
+      CALL SHALLOW_MF_BITREPRO( &
+          D, CST, NEBN, PARAMMF, TURBN, CSTURB,ICEP,            &
+       &  KRR, KRRL, KRRI, KSV,                                 &
+       &  ONOMIXLG,KSV_LGBEG,KSV_LGEND,                         &
+       &  PTSTEP,                                               &
+       &  ZDZZ(:,:,JBLK), ZZZ(:,:,JBLK),                                            &
+       &  ZRHODJ(:,:,JBLK), ZRHODREF(:,:,JBLK),                                     &
+       &  ZPABSM(:,:,JBLK), ZEXNM(:,:,JBLK),                                        &
+       &  ZSFTH(:,JBLK),ZSFRV(:,JBLK),                                          &
+       &  ZTHM(:,:,JBLK),ZRM(:,:,:,JBLK),ZUM(:,:,JBLK),&
+       &  ZVM(:,:,JBLK),ZTKEM(:,:,JBLK),ZSVM(:,:,:,JBLK),                          &
+       &  ZDUDT_MF(:,:,JBLK),ZDVDT_MF(:,:,JBLK),ZDTKEDT_MF(:,:,JBLK),               &
+       &  ZDTHLDT_MF(:,:,JBLK),ZDRTDT_MF(:,:,JBLK),ZDSVDT_MF(:,:,:,JBLK),        &
+       &  ZSIGMF(:,:,JBLK) ,ZRC_MF(:,:,JBLK),ZRI_MF(:,:,JBLK),                     &
+       &  ZCF_MF(:,:,JBLK),ZHLC_HRC(:,:,JBLK),ZHLC_HCF(:,:,JBLK),               &
+       &  ZHLI_HRI(:,:,JBLK),ZHLI_HCF(:,:,JBLK),                                &
+       &  ZWEIGHT_MF_CLOUD(:,:,JBLK),ZFLXZTHVMF(:,:,JBLK),               &
+       &  ZFLXZTHMF(:,:,JBLK),ZFLXZRMF(:,:,JBLK),ZFLXZUMF(:,:,JBLK),ZFLXZVMF(:,:,JBLK),&
+       &  ZFLXZTKEMF(:,:,JBLK),ZTHL_UP(:,:,JBLK),ZRT_UP(:,:,JBLK),ZRV_UP(:,:,JBLK),&
+       &  ZRC_UP(:,:,JBLK),ZRI_UP(:,:,JBLK),ZU_UP(:,:,JBLK),                  &
+       &  ZV_UP(:,:,JBLK), ZTKE_UP(:,:,JBLK),ZTHV_UP(:,:,JBLK), ZW_UP(:,:,JBLK),     &
+       &  ZFRAC_UP(:,:,JBLK),ZEMF(:,:,JBLK),ZDETR(:,:,JBLK),ZENTR(:,:,JBLK),        &
+       &  IKLCL(:,JBLK),IKETL(:,JBLK),IKCTL(:,JBLK),PDX,PDY , &
+       &  KBUDGETS=KBUDGETS  )
 
+    ENDDO
+!!$OMP END SINGLE
+
+  ELSEIF (TRIM (CLMETHOD) == 'openmpsinglecolumn') THEN
     YSTACK%IALIGN = 8 
     IF (ISIZE4 > 0) ALLOCATE (YSTACK%ZDATA4 (NPROMA, KLEV, ISIZE4, NGPBLKS))
     IF (ISIZE8 > 0) ALLOCATE (YSTACK%ZDATA8 (NPROMA, KLEV, ISIZE8, NGPBLKS))
-!$OMP PARALLEL DO PRIVATE (JBLK, JLON, YLSTACK) FIRSTPRIVATE(D) COLLAPSE(2)
+!write (0,*) "debut openmp"
+!!$OMP PARALLEL DO PRIVATE (JBLK, JLON, YLSTACK) FIRSTPRIVATE(D) COLLAPSE(2)
+!$OMP SINGLE PRIVATE (JBLK, JLON, YLSTACK) FIRSTPRIVATE(D) !COLLAPSE(2)
     DO JBLK = 1, NGPBLKS
       DO JLON = 1,NPROMA
         D%NIJB=JLON
@@ -287,7 +322,9 @@ DO ITIME = 1, NTIME
       ENDDO
     
     ENDDO
-
+    !$OMP END SINGLE
+    !!!!!!!!!!!!!!!!!!!!pour tests
+    call flush(0)
   ELSEIF (TRIM (CLMETHOD) == 'openaccsinglecolumn') THEN
 
     YSTACK%IALIGN = 8 

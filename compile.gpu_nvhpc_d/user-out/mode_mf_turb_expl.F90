@@ -6,7 +6,7 @@
      MODULE MODE_MF_TURB_EXPL
 
 !$ACDC singlecolumn
-
+!$ACDC bitrepro 
 !    ######################
 IMPLICIT NONE
 CONTAINS

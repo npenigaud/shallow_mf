@@ -1,0 +1,160 @@
+#!/usr/bin/perl -w
+
+use Cwd;
+use FileHandle;
+use Data::Dumper;
+use File::Path;
+use File::Copy;
+use File::Spec;
+use File::Basename;
+use File::Temp;
+use FindBin qw ($Bin);
+use Getopt::Long;
+
+use strict;
+
+use FindBin qw ($Bin);
+use lib "$Bin/../lib";
+
+use Fxtran::Common;
+use Fxtran::Bt;
+use Fxtran::PATH;
+use queue;
+
+sub runCommand
+{
+  my @cmd = @_;
+  print "@cmd\n";
+  system (@cmd)
+    and die ("Command `@cmd' failed");
+}
+
+sub getLines
+{
+  my $f = shift;
+  my @lst;
+  if (my $fh = 'FileHandle'->new ("<$f"))
+    {
+      @lst = <$fh>; 
+      chomp for (@lst);
+    }
+  return @lst;
+}
+
+sub processFile
+{
+  shift;
+  my %args = @_;
+  my ($file, $config) = @args{qw (file config)};
+
+  my ($dir, $view, $F90) = ($file =~ m{^(\w+)/(\w+)/(.*)$}o);
+  
+  $dir = join ('/', $dir, 'local', &dirname ($F90));
+  
+  &mkpath ($dir) unless (-d $dir);
+
+  my @cmd = ('fxtran-f90', '--config', $config, '--dir', $dir, '--dryrun', '--', 'f90', '-c', $file);
+
+  print "@cmd\n";
+
+  if (system (@cmd))
+    {
+      die ("Command `@cmd' failed");
+    }
+}
+
+sub processIntf
+{
+  shift;
+  my %args = @_;
+  my ($file, $config) = @args{qw (file config)};
+
+  my ($dir, $view, $F90) = ($file =~ m{^(\w+)/(\w+)/(.*)$}o);
+  
+  $dir = join ('/', $dir, 'local', '.intfb');
+  
+  &mkpath ($dir) unless (-d $dir);
+
+  my $tmp = 'File::Temp'->newdir (CLEANUP => 0);
+
+  my @cmd = ('fxtran-f90', '--method', 'interface', '--config', $config, '--dir', $dir, '--dryrun', '--', 'f90', '-c', $file);
+
+  print "@cmd\n";
+
+  if (system (@cmd))
+    {
+      die ("Command `@cmd' failed");
+    }
+}
+
+sub processList
+{
+  my %opts = %{ shift (@_) };
+  my @lst = @_;
+
+  my $queue = delete $opts{queue};
+
+  for my $file (@lst)
+    {
+      $queue->append (['main', $opts{method}, [file => $file, %opts]]);
+    }
+  
+  $queue->flush ();
+}
+
+my $cwd = &cwd ();
+
+my %opts = (threads => 4);
+my @opts_f = qw (help);
+my @opts_s = qw (threads);
+
+&GetOptions
+(
+  (map { ($_, \$opts{$_}) } @opts_f),
+  (map { ("$_=s", \$opts{$_}) } @opts_s),
+);
+
+$ENV{TMPDIR}      = "$cwd/tmp";
+$ENV{TARGET_PACK} = $cwd;
+
+my @mod = &getLines ("list.mod");
+my @src = &getLines ("list.src");
+my @int = &getLines ("list.int");
+
+my @type = map { m/^fxtran-(\w+)\.conf$/o; $1 } <fxtran-*.conf>;
+
+my $queue = 'queue'->new (threads => $opts{threads}, verbose => $opts{verbose});
+
+for my $type (@type)
+  {
+    my $config = "fxtran-$type.conf";
+
+    for my $d (qw (types-fieldapi types-constant src/local hub/local))
+      {
+        &rmtree ($d) if (-d $d);
+      }
+
+    &processList ({queue => $queue, config => $config, method => 'processIntf', %opts}, @int);
+    &processList ({queue => $queue, config => $config, method => 'processFile', %opts}, @mod);
+    &processList ({queue => $queue, config => $config, method => 'processFile', %opts}, @src);
+
+    &rmtree ("run/$type");
+    &mkpath ("run/$type") or die;
+
+    for my $dir (qw (hub src))
+      {
+        &mkpath ("run/$type/$dir") or die;
+
+        if (-d "$dir/local")
+          {
+            &move ("$dir/local", "run/$type/$dir/local") 
+              or die ("Cannot move `$dir/local' into `run/$type/$dir/local'");
+          }
+        if ((-d "ref/$type/$dir/local") && (-d "run/$type/$dir/local"))
+          {
+            &runCommand (qw (diff -B -w -x *.F90.xml -r), "ref/$type/$dir/local", "run/$type/$dir/local");
+          }
+      }
+
+  }
+

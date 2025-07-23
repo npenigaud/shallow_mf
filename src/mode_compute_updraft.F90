@@ -7,7 +7,7 @@
      MODULE MODE_COMPUTE_UPDRAFT
 
 !$ACDC singlecolumn --inline-contained
-
+!$ACDC bitrepro 
 !    ###########################
 !
 IMPLICIT NONE
@@ -398,7 +398,7 @@ IF (OENTR_DETR) THEN
   END DO
   CALL TH_R_FROM_THL_RT(D, CST, NEBN, NEBN%CFRAC_ICE_SHALLOW_MF, PFRAC_ICE_UP(:,IKB), ZPRES_F(:,IKB), &
              PTHL_UP(:,IKB),PRT_UP(:,IKB),PTH_UP(:,IKB), &
-             PRV_UP(:,IKB),PRC_UP(:,IKB),PRI_UP(:,IKB),ZRSATW,ZRSATI, OOCEAN=.FALSE., &
+             PRV_UP(:,IKB),PRC_UP(:,IKB),PRI_UP(:,IKB),ZRSATW(:),ZRSATI(:), OOCEAN=.FALSE., &
              PBUF=ZBUF)
   DO JIJ=IIJB, IIJE
     ! compute updraft thevav and buoyancy term at KKB level
@@ -672,7 +672,7 @@ DO JK=IKB,IKE-IKL,IKL
     END DO
     CALL TH_R_FROM_THL_RT(D, CST, NEBN, NEBN%CFRAC_ICE_SHALLOW_MF, PFRAC_ICE_UP(:,JK+IKL), ZPRES_F(:,JK+IKL), &
             PTHL_UP(:,JK+IKL),PRT_UP(:,JK+IKL),PTH_UP(:,JK+IKL),              &
-            ZRV_UP,ZRC_UP,ZRI_UP,ZRSATW,ZRSATI, OOCEAN=.FALSE., &
+            ZRV_UP(:),ZRC_UP(:),ZRI_UP(:),ZRSATW(:),ZRSATI(:), OOCEAN=.FALSE., &
             PBUF=ZBUF)
     DO JIJ=IIJB, IIJE
       IF (GTEST(JIJ)) THEN

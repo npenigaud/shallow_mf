@@ -1,0 +1,54 @@
+#!/usr/bin/perl -w
+
+use Data::Dumper;
+use Getopt::Long;
+use FileHandle;
+use FindBin qw ($Bin);
+
+use lib "$Bin/../lib";
+
+use strict;
+
+use Fxtran::Common;
+use Fxtran::Bt;
+use Fxtran::Formatter;
+use Fxtran::DiffTool;
+use Fxtran::Tool;
+
+my %opts = qw (simplify-associate-blocks 1);
+my @opts_f = qw (simplify-associate-blocks help);
+my @opts_s = qw (difftool);
+
+&GetOptions
+(
+  (map { ("$_!", \$opts{$_}) } @opts_f),
+  (map { ("$_=s", \$opts{$_}) } @opts_s),
+);
+
+if ($opts{help} || (scalar (@ARGV) != 2))
+  {
+    exec ('perldoc', $0);
+  }
+
+unless ($opts{difftool})
+  {
+    for my $prog (qw (kdiff3 meld vimdiff))
+      {
+        next unless (&Fxtran::Tool::which ($prog));
+        $opts{difftool} = $prog;
+        last;
+      }
+  }
+
+$opts{log} = \&Fxtran::Tool::ll;
+$opts{runcommand} = \&Fxtran::Tool::runCommand;
+
+my ($local, $remote) = @ARGV;
+
+'Fxtran::Formatter'->prepareFileForMerging ($_, %opts) 
+  for ($local, $remote);
+
+'Fxtran::DiffTool'->diff ($local, $remote, %opts);
+
+exit (0);
+

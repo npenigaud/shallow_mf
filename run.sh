@@ -19,29 +19,64 @@ cd $SUBMIT_DIR
 #arch=cpu_intel_d
 arch=gpu_nvhpc_d
 
+#####création de fichier - petit
 ##for method in openaccsinglecolumn
 ##do
 ##../compile.${arch}/main_shallow_mf.x  \
-##  --case-in /home/gmap/mrpm/penigaudn/pack/50_shallow_mfT1rc.02.IMPIIFCI2302REPRODP.y/datawrapper/ \
-##  --case-out /home/gmap/mrpm/penigaudn/shallow_mf/data_gpu/ \
+##  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu/ \
+##  --case-out /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu_repro/ \
 ##  --verbose  --diff  \
 ##  --method $method > $method.txt 2>&1
 ##done
 
-for method in openmp openmpsinglecolumn openaccsinglecolumn
+######gros 
+###for method in openaccsinglecolumn
+###do
+###../compile.${arch}/main_shallow_mf.x  \
+###  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_gpu/ \
+###  --case-out /home/gmap/mrpm/penigaudn/shallow_mf/data_gpu_repro/ \
+###  --verbose  --diff  \
+###  --method $method > $method.txt 2>&1
+###done
+
+######test reproductibilité exacte - petit
+for method in openmp openmp_bitrepro openmpsinglecolumn openaccsinglecolumn
 do
 ../compile.${arch}/main_shallow_mf.x  \
-  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_gpu/ \
+  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu_repro/ \
   --verbose  --diff  \
-  --nproma 64        \
+  --nproma 32        \
   --method $method > $method.txt 2>&1
 done
 
-##for method in openmp openmpsinglecolumn openaccsinglecolumn
+######gros
+##for method in openmp openmp_bitrepro openmpsinglecolumn openaccsinglecolumn
 ##do
 ##../compile.${arch}/main_shallow_mf.x  \
-##  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu/ \
+##  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_gpu_repro/ \
 ##  --verbose  --diff  \
-##  --nproma 64        \
+##  --nproma 32        \
 ##  --method $method > $method.txt 2>&1
 ##done
+
+
+
+####test effet précision des fonctions de br_transcendentals.cc
+###for method in openmp openmp_bitrepro openmpsinglecolumn openaccsinglecolumn
+###do
+###../compile.${arch}/main_shallow_mf.x  \
+###  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu/ \
+###  --verbose  --diff  \
+###  --nproma 32        \
+###  --method $method > $method.txt 2>&1
+###done
+
+####vérifie que le cas openacc tourne bien sur GPU
+###for method in openaccsinglecolumn
+###do
+###srun /opt/softs/nvidia/hpc_sdk/Linux_x86_64/23.3/compilers/bin/nsys profile ../compile.${arch}/main_shallow_mf.x  \
+###  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_gpu_repro/ \
+###  --verbose  --diff  \
+###  --nproma 32        \
+###  --method $method > $method.txt 2>&1
+###done

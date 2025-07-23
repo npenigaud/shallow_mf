@@ -1,20 +1,24 @@
-FCFLAGS=-mp -fPIC -Minfo -gopt -Mlarge_arrays -Mlist -traceback -Mnofma -Mbyteswapio -Mbackslash -Mstack_arrays -cuda -acc=gpu -O1 -r8 -gopt -gpu=cc70,cc80 -Minfo=accel,all,ccff -DARCH="'$(ARCH)'"
+FCFLAGS=-mp -Minfo -gopt -Mlarge_arrays -Mlist -traceback -Mnofma -Mbyteswapio -Mbackslash -Mstack_arrays -cuda -acc=gpu -O0 -r8 -gopt -gpu=lineinfo,cc70,cc80 -Minfo=accel,all,ccff -DARCH="'$(ARCH)'"
 
 ARCH=gpu_nvhpc_d
 LIBS=
+
+CCFLAGS=-std=c++11 -acc=gpu -Minfo=accel,all,ccff -gpu=lineinfo,cc70,cc80 -O0 -cuda -Mnofma
 
 FC=fxtran-f90 \
   --prefix fxtran-acdc \
   --user-directory-in user-in \
   --user-directory-out user-out \
   --config $(SRC)/fxtran.conf -- \
-  /home/gmap/mrpm/marguina/gpupack/support/wrap/NVHPC2405ECTRANSGPU/mpif90 \
+  "$(PWD)/../wrap/NVHPC2405ECTRANSGPU/mpif90" \
   $(FCFLAGS) -DARCH="'$(ARCH)'"
 
 boot: fxtran-acdc
 
 fxtran-acdc:
-	fxtran-boot --prefix fxtran-acdc --  /home/gmap/mrpm/marguina/gpupack/support/wrap/NVHPC2405ECTRANSGPU/mpif90 $(FCFLAGS) 
+	fxtran-boot --prefix fxtran-acdc \
+            --F90 "$(PWD)/..//wrap/NVHPC2405ECTRANSGPU/mpif90 $(FCFLAGS)" \
+            --CXX "/opt/softs/nvidia/hpc_sdk/Linux_x86_64/24.5/compilers/bin/nvc++ $(CCFLAGS)" 
 
 CC=gcc
 
