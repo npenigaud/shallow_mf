@@ -22,8 +22,8 @@ namespace bitrep
  *************/
  
 static const double const_2_over_pi = 6.3661977236758138e-1;
-
-
+static const double halfLogTwoPi = 0.91893853320467274178032973640562;
+static const double squareRootOfPi = 1.77245385090551602729816748334;
 
 /*****************************************
  * FORWARD DECLARATION OF SOME FUNCTIONS *
@@ -1051,9 +1051,7 @@ double __erfseries(double x)
     del   = coef/(__BITREPFMA(2.0,k,1.0));
     e += del;
   }
-  return 2.0 / 1.77245385090551602729816748334  * e;
-  //2.0/sqrt(pi)*e;
-
+  return 2.0 / squareRootOfPi  * e;
 
 }
 
@@ -1226,7 +1224,6 @@ double log_gamma
     }
     double series = sum/x;
 
-    static const double halfLogTwoPi = 0.91893853320467274178032973640562;
     double loggamma ;
         loggamma = (x - 0.5)*log(x) ;
         loggamma = loggamma - x ;
