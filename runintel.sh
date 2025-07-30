@@ -20,14 +20,14 @@ arch=cpu_intel_d
 #arch=gpu_nvhpc_d
 
 ######test bon fonctionnement - petit
-for method in openmp openmp_bitrepro openmpsinglecolumn openaccsinglecolumn
-do
-../compile.${arch}/main_shallow_mf.x  \
-  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu/ \
-  --verbose  --diff  \
-  --nproma 32        \
-  --method $method > $method.txt 2>&1
-done
+##for method in openmp openmp_bitrepro openmpsinglecolumn openaccsinglecolumn
+##do
+##../compile.${arch}/main_shallow_mf.x  \
+##  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu/ \
+##  --verbose  --diff  \
+##  --nproma 32        \
+##  --method $method > $method.txt 2>&1
+##done
 
 #####création de fichier - petit
 ##for method in openaccsinglecolumn
@@ -50,14 +50,14 @@ done
 ###done
 
 ######test reproductibilité exacte - petit
-##for method in openmp openmp_bitrepro openmpsinglecolumn openaccsinglecolumn
-##do
-##../compile.${arch}/main_shallow_mf.x  \
-##  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu_repro/ \
-##  --verbose  --diff  \
-##  --nproma 32        \
-##  --method $method > $method.txt 2>&1
-##done
+for method in openmp openmp_bitrepro openmpsinglecolumn openaccsinglecolumn
+do
+../compile.${arch}/main_shallow_mf.x  \
+  --case-in /home/gmap/mrpm/penigaudn/shallow_mf/data_small_gpu_repro/ \
+  --verbose  --diff  \
+  --nproma 32        \
+  --method $method > $method.txt 2>&1
+done
 
 ######gros
 ##for method in openmp openmp_bitrepro openmpsinglecolumn openaccsinglecolumn
