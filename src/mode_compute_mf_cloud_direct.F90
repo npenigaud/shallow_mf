@@ -4,10 +4,8 @@
 !MNH_LIC for details. version 1.
 !     ######spl
      MODULE MODE_COMPUTE_MF_CLOUD_DIRECT
-
-!$ACDC singlecolumn
-!$ACDC bitrepro
-
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks 
 !    ###################################
 !
 IMPLICIT NONE
@@ -15,6 +13,7 @@ CONTAINS
       SUBROUTINE COMPUTE_MF_CLOUD_DIRECT(D, PARAMMF, &
                                         &KKLCL, PFRAC_UP, PRC_UP, PRI_UP,&
                                         &PRC_MF, PRI_MF, PCF_MF, PWEIGHT_MF_CLOUD)
+
 !     #################################################################
 !!
 !!****  *COMPUTE_MF_CLOUD_DIRECT* -

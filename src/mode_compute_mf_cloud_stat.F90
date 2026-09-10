@@ -4,9 +4,8 @@
 !MNH_LIC for details. version 1.
 !     ######spl
      MODULE MODE_COMPUTE_MF_CLOUD_STAT
-
-!$ACDC singlecolumn
-!$ACDC bitrepro 
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks 
 
 !    ############################
 !
@@ -20,6 +19,7 @@ CONTAINS
                             &PDZZ, PTHM, PEXNM, &
                             &PEMF, PTHL_UP, PRT_UP,&
                             &PSIGMF)
+
 !     #################################################################
 !!
 !!****  *COMPUTE_MF_CLOUD_STAT* -

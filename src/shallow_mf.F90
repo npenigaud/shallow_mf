@@ -25,9 +25,8 @@
                 KKLCL,KKETL,KKCTL,PDX,PDY,PRSVS,PSVMIN,               &
                 KBUDGETS)
 !!                BUCONF, TBUDGETS, KBUDGETS                            )
-
 !$ACDC singlecolumn --inline-contained
-!$ACDC bitrepro 
+!$ACDC manyblocks  
 
 !     #################################################################
 !!

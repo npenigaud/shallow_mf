@@ -38,9 +38,9 @@ USE UTIL_RAIN_ICE_PARAM_T_MOD
 USE XRD_GETOPTIONS
 USE XRD_UNIX_ENV
 
-#include "stack.h"
+#include "fxtran_acdc_stack.h"
 
-USE STACK_MOD
+USE FXTRAN_ACDC_STACK_MOD
 
 USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : STDOUT => OUTPUT_UNIT
 
@@ -129,13 +129,14 @@ CHARACTER (LEN=128) :: CLOUT
 CHARACTER (LEN=128) :: CLCASE_IN
 CHARACTER (LEN=128) :: CLCASE_OUT
 TYPE (DD12), POINTER :: YLD
-LOGICAL :: LLVERBOSE, LLDIFF
+LOGICAL :: LLVERBOSE, LLDIFF,LLSTAT
 INTEGER, POINTER :: IBLOCKLIST (:)
-TYPE(STACK) :: YLSTACK
+TYPE(FXTRAN_ACDC_STACK) :: YLSTACK
+TYPE(FXTRAN_ACDC_STACK) :: YLOFFSET
 INTEGER :: ISIZE4, ISIZE8
 CHARACTER*64 :: CLMETHOD
 INTEGER :: ITIME, NTIME
-LOGICAL :: LLSAVE, LLEXIST
+LOGICAL :: LLSAVE, LLEXIST,LLACC
 REAL(KIND=8) :: TSC, TEC, TSD, TED, ZTC, ZTD
 #ifdef ARCH
 CHARACTER (LEN=*), PARAMETER :: CLARCH = ARCH
@@ -159,6 +160,7 @@ CLCASE_OUT = ''; CALL GETOPTION ("--case-out", CLCASE_OUT)
 
 CALL GETOPTION ("--verbose", LLVERBOSE)
 CALL GETOPTION ("--diff", LLDIFF)
+CALL GETOPTION ("--stat", LLSTAT)
 #ifdef PARKIND1_SINGLE
 ISIZE4 = 80; 
 ISIZE8 = 10; 
@@ -196,14 +198,16 @@ ENDIF
 
 CALL GET_TIME (TSD)
 
-!$ACC DATA COPY ( ZZZ , ZDZZ,  ZRHODJ , ZRHODREF , ZPABSM    , ZEXNM     ,&
-!$ACC& ZSFTH, ZSFRV, ZTHM, ZRM, ZUM, ZVM, ZTKEM, ZSVM, ZDUDT_MF, ZDVDT_MF,&
-!$ACC& ZDTHLDT_MF, ZDRTDT_MF, ZDSVDT_MF, ZSIGMF, ZRC_MF, ZRI_MF, ZCF_MF,&
-!$ACC& ZFLXZTHVMF, ZFLXZTHMF, ZFLXZRMF, ZFLXZUMF, ZFLXZVMF, ZTHL_UP, ZRT_UP,&
-!$ACC& ZRV_UP, ZU_UP, ZV_UP, ZRC_UP, ZRI_UP, ZTHV_UP, ZW_UP, ZFRAC_UP, ZEMF,&
-!$ACC& ZDETR, ZENTR, IKLCL, IKETL, IKCTL) IF (TRIM (CLMETHOD) == 'openaccsinglecolumn')
+!$ACC DATA COPY ( ZDZZ, ZZZ, ZRHODJ, ZRHODREF,ZPABSM, ZEXNM, &
+!$ACC  &  ZSFTH,ZSFRV,ZTHM,ZRM,ZUM,ZVM,ZTKEM,ZSVM,   &
+!$ACC  &  ZDUDT_MF,ZDVDT_MF,ZDTKEDT_MF,ZDTHLDT_MF,ZDRTDT_MF,ZDSVDT_MF,        &
+!$ACC  &  ZSIGMF ,ZRC_MF,ZRI_MF,ZCF_MF,ZHLC_HRC,ZHLC_HCF,               &
+!$ACC  &  ZHLI_HRI,ZHLI_HCF,ZWEIGHT_MF_CLOUD,ZFLXZTHVMF,               &
+!$ACC  &  ZFLXZTHMF,ZFLXZRMF,ZFLXZUMF,ZFLXZVMF,ZFLXZTKEMF,ZTHL_UP,ZRT_UP,ZRV_UP,&
+!$ACC  &  ZRC_UP,ZRI_UP,ZU_UP,ZV_UP,ZTKE_UP,ZTHV_UP, ZW_UP,     &
+!$ACC  &  ZFRAC_UP,ZEMF,ZDETR,ZENTR,IKLCL,IKETL,IKCTL,PDX,PDY) IF (TRIM (CLMETHOD) == 'openaccsinglecolumn' .OR. TRIM (CLMETHOD) == 'openaccmanyblocks')
 
-IF (TRIM (CLMETHOD) == 'openaccsinglecolumn') THEN
+IF (TRIM (CLMETHOD) == 'openaccsinglecolumn' .OR. TRIM (CLMETHOD) == 'openaccmanyblocks') THEN
   CALL COPY (D)
   CALL COPY (DD)
   CALL COPY (CST)
@@ -248,43 +252,13 @@ DO ITIME = 1, NTIME
        &  KBUDGETS=KBUDGETS                            )
     ENDDO
 
-  ELSEIF (TRIM (CLMETHOD) == 'openmp_bitrepro') THEN
- 
-!$OMP PARALLEL DO PRIVATE (JBLK)
-    DO JBLK = 1, NGPBLKS
-      CALL SHALLOW_MF_BITREPRO( &
-          D, CST, NEBN, PARAMMF, TURBN, CSTURB,ICEP,            &
-       &  KRR, KRRL, KRRI, KSV,                                 &
-       &  ONOMIXLG,KSV_LGBEG,KSV_LGEND,                         &
-       &  PTSTEP,                                               &
-       &  ZDZZ(:,:,JBLK), ZZZ(:,:,JBLK),                                            &
-       &  ZRHODJ(:,:,JBLK), ZRHODREF(:,:,JBLK),                                     &
-       &  ZPABSM(:,:,JBLK), ZEXNM(:,:,JBLK),                                        &
-       &  ZSFTH(:,JBLK),ZSFRV(:,JBLK),                                          &
-       &  ZTHM(:,:,JBLK),ZRM(:,:,:,JBLK),ZUM(:,:,JBLK),&
-       &  ZVM(:,:,JBLK),ZTKEM(:,:,JBLK),ZSVM(:,:,:,JBLK),                          &
-       &  ZDUDT_MF(:,:,JBLK),ZDVDT_MF(:,:,JBLK),ZDTKEDT_MF(:,:,JBLK),               &
-       &  ZDTHLDT_MF(:,:,JBLK),ZDRTDT_MF(:,:,JBLK),ZDSVDT_MF(:,:,:,JBLK),        &
-       &  ZSIGMF(:,:,JBLK) ,ZRC_MF(:,:,JBLK),ZRI_MF(:,:,JBLK),                     &
-       &  ZCF_MF(:,:,JBLK),ZHLC_HRC(:,:,JBLK),ZHLC_HCF(:,:,JBLK),               &
-       &  ZHLI_HRI(:,:,JBLK),ZHLI_HCF(:,:,JBLK),                                &
-       &  ZWEIGHT_MF_CLOUD(:,:,JBLK),ZFLXZTHVMF(:,:,JBLK),               &
-       &  ZFLXZTHMF(:,:,JBLK),ZFLXZRMF(:,:,JBLK),ZFLXZUMF(:,:,JBLK),ZFLXZVMF(:,:,JBLK),&
-       &  ZFLXZTKEMF(:,:,JBLK),ZTHL_UP(:,:,JBLK),ZRT_UP(:,:,JBLK),ZRV_UP(:,:,JBLK),&
-       &  ZRC_UP(:,:,JBLK),ZRI_UP(:,:,JBLK),ZU_UP(:,:,JBLK),                  &
-       &  ZV_UP(:,:,JBLK), ZTKE_UP(:,:,JBLK),ZTHV_UP(:,:,JBLK), ZW_UP(:,:,JBLK),     &
-       &  ZFRAC_UP(:,:,JBLK),ZEMF(:,:,JBLK),ZDETR(:,:,JBLK),ZENTR(:,:,JBLK),        &
-       &  IKLCL(:,JBLK),IKETL(:,JBLK),IKCTL(:,JBLK),PDX,PDY , &
-       &  KBUDGETS=KBUDGETS  )
-
-    ENDDO
-
   ELSEIF (TRIM (CLMETHOD) == 'openmpsinglecolumn') THEN
 
     IF (ITIME==1) THEN
-      YSTACK%IALIGN = 8 
-      IF (ISIZE4 > 0) ALLOCATE (YSTACK%ZDATA4 (NPROMA, KLEV, ISIZE4, NGPBLKS))
-      IF (ISIZE8 > 0) ALLOCATE (YSTACK%ZDATA8 (NPROMA, KLEV, ISIZE8, NGPBLKS))
+      CALL YFXTRAN_ACDC_STACK%INIT(NPROMA,KLEV,NGPBLKS,ISIZE4,ISIZE8)
+!!      YSTACK%IALIGN = 8 
+!!      IF (ISIZE4 > 0) ALLOCATE (YSTACK%ZDATA4 (NPROMA, KLEV, ISIZE4, NGPBLKS))
+!!      IF (ISIZE8 > 0) ALLOCATE (YSTACK%ZDATA8 (NPROMA, KLEV, ISIZE8, NGPBLKS))
     ENDIF
 
 !$OMP PARALLEL DO PRIVATE (JBLK, JLON, YLSTACK) FIRSTPRIVATE(D) COLLAPSE(2)
@@ -294,10 +268,10 @@ DO ITIME = 1, NTIME
         D%NIJE=JLON
         D%NIB=JLON
         D%NIE=JLON
-        YLSTACK%L8 = stack_l8 (YSTACK, JBLK, NGPBLKS)
-        YLSTACK%U8 = stack_u8 (YSTACK, JBLK, NGPBLKS)
-        YLSTACK%L4 = stack_l4 (YSTACK, JBLK, NGPBLKS)
-        YLSTACK%U4 = stack_u4 (YSTACK, JBLK, NGPBLKS)
+        YLSTACK%L8 = fxtran_acdc_stack_l8 (YFXTRAN_ACDC_STACK, JBLK, NGPBLKS)
+        YLSTACK%U8 = fxtran_acdc_stack_u8 (YFXTRAN_ACDC_STACK, JBLK, NGPBLKS)
+        YLSTACK%L4 = fxtran_acdc_stack_l4 (YFXTRAN_ACDC_STACK, JBLK, NGPBLKS)
+        YLSTACK%U4 = fxtran_acdc_stack_u4 (YFXTRAN_ACDC_STACK, JBLK, NGPBLKS)
           
         CALL SHALLOW_MF_OPENACC(  D, CST, NEBN, PARAMMF, TURBN, CSTURB,ICEP,    &
        &  KRR, KRRL, KRRI, KSV,                                 &
@@ -334,17 +308,18 @@ CALL NVTXSTARTRANGE("SHALLOW_MF_OPENACC")
 
     IF (ITIME==1) THEN
 
-      YSTACK%IALIGN = 8 
-      ALLOCATE (YSTACK%ZDATA4 (NPROMA, KLEV, ISIZE4, NGPBLKS))
-      ALLOCATE (YSTACK%ZDATA8 (NPROMA, KLEV, ISIZE8, NGPBLKS))
+      CALL YFXTRAN_ACDC_STACK%INIT(NPROMA,KLEV,NGPBLKS,ISIZE4,ISIZE8)
+!!      YSTACK%IALIGN = 8 
+!!      ALLOCATE (YSTACK%ZDATA4 (NPROMA, KLEV, ISIZE4, NGPBLKS))
+!!      ALLOCATE (YSTACK%ZDATA8 (NPROMA, KLEV, ISIZE8, NGPBLKS))
 
-!$ACC ENTER DATA CREATE (YSTACK%ZDATA4)
-!$ACC ENTER DATA CREATE (YSTACK%ZDATA8)
-
-!$ACC ENTER DATA CREATE (YSTACK)
-!$ACC UPDATE DEVICE (YSTACK)
-!$ACC ENTER DATA ATTACH (YSTACK%ZDATA4)
-!$ACC ENTER DATA ATTACH (YSTACK%ZDATA8)
+!!!$ACC ENTER DATA CREATE (YSTACK%ZDATA4)
+!!!$ACC ENTER DATA CREATE (YSTACK%ZDATA8)
+!!
+!!!$ACC ENTER DATA CREATE (YSTACK)
+!!!$ACC UPDATE DEVICE (YSTACK)
+!!!$ACC ENTER DATA ATTACH (YSTACK%ZDATA4)
+!!!$ACC ENTER DATA ATTACH (YSTACK%ZDATA8)
 
     ENDIF
     
@@ -360,17 +335,16 @@ CALL NVTXSTARTRANGE("SHALLOW_MF_OPENACC")
    DO JBLK = 1, NGPBLKS
 !$ACC LOOP VECTOR &
 !$ACC&PRIVATE (JLON,DD, YLSTACK) 
-    
       DO JLON = 1, NPROMA
         DD=D    
         DD%NIJB=JLON
         DD%NIJE=JLON
         DD%NIB=JLON
         DD%NIE=JLON
-        YLSTACK%L8 = stack_l8 (YSTACK, JBLK, NGPBLKS)
-        YLSTACK%U8 = stack_u8 (YSTACK, JBLK, NGPBLKS)
-        YLSTACK%L4 = stack_l4 (YSTACK, JBLK, NGPBLKS)
-        YLSTACK%U4 = stack_u4 (YSTACK, JBLK, NGPBLKS)
+        YLSTACK%L8 = fxtran_acdc_stack_l8 (YFXTRAN_ACDC_STACK, JBLK, NGPBLKS)
+        YLSTACK%U8 = fxtran_acdc_stack_u8 (YFXTRAN_ACDC_STACK, JBLK, NGPBLKS)
+        YLSTACK%L4 = fxtran_acdc_stack_l4 (YFXTRAN_ACDC_STACK, JBLK, NGPBLKS)
+        YLSTACK%U4 = fxtran_acdc_stack_u4 (YFXTRAN_ACDC_STACK, JBLK, NGPBLKS)
 
         CALL SHALLOW_MF_OPENACC( &
           DD, CST, NEBN, PARAMMF, TURBN, CSTURB,ICEP,            &
@@ -397,12 +371,70 @@ CALL NVTXSTARTRANGE("SHALLOW_MF_OPENACC")
        &  IKLCL(:,JBLK),IKETL(:,JBLK),IKCTL(:,JBLK),PDX,PDY,                            &
        &  KBUDGETS=KBUDGETS, YDSTACK=YLSTACK           )
       ENDDO
-    
+   
     ENDDO
 
 #ifdef __NVCOMPILER
 CALL NVTXENDRANGE()
 #endif
+
+  ELSEIF (TRIM(CLMETHOD)== 'openaccmanyblocks') THEN  
+
+        LLACC=.TRUE.
+        YLOFFSET=FXTRAN_ACDC_STACK(0,0,0,0)
+        CALL SHALLOW_MF_MANYBLOCKS( &
+          D, CST, NEBN, PARAMMF, TURBN, CSTURB,ICEP,            &
+       &  KRR, KRRL, KRRI, KSV,                                 &
+       &  ONOMIXLG,KSV_LGBEG,KSV_LGEND,                         &
+       &  PTSTEP,                                               &
+       &  ZDZZ, ZZZ,                                            &
+       &  ZRHODJ, ZRHODREF,                                     &
+       &  ZPABSM, ZEXNM,                                        &
+       &  ZSFTH,ZSFRV,                                          &
+       &  ZTHM,ZRM,ZUM,&
+       &  ZVM,ZTKEM,ZSVM,                          &
+       &  ZDUDT_MF,ZDVDT_MF,ZDTKEDT_MF,               &
+       &  ZDTHLDT_MF,ZDRTDT_MF,ZDSVDT_MF,        &
+       &  ZSIGMF ,ZRC_MF,ZRI_MF,                     &
+       &  ZCF_MF,ZHLC_HRC,ZHLC_HCF,               &
+       &  ZHLI_HRI,ZHLI_HCF,                                &
+       &  ZWEIGHT_MF_CLOUD,ZFLXZTHVMF,               &
+       &  ZFLXZTHMF,ZFLXZRMF,ZFLXZUMF,ZFLXZVMF,&
+       &  ZFLXZTKEMF,ZTHL_UP,ZRT_UP,ZRV_UP,&
+       &  ZRC_UP,ZRI_UP,ZU_UP,                  &
+       &  ZV_UP, ZTKE_UP,ZTHV_UP, ZW_UP,     &
+       &  ZFRAC_UP,ZEMF,ZDETR,ZENTR,        &
+       &  IKLCL,IKETL,IKCTL,PDX,PDY,                            &
+       &  KBUDGETS=KBUDGETS, LDACC=LLACC,KGPBLKS=NGPBLKS   )
+
+  ELSEIF (TRIM(CLMETHOD)== 'hostmanyblocks') THEN  
+
+        LLACC=.FALSE.
+        YLOFFSET=FXTRAN_ACDC_STACK(0,0,0,0)
+        CALL SHALLOW_MF_MANYBLOCKS( &
+          D, CST, NEBN, PARAMMF, TURBN, CSTURB,ICEP,            &
+       &  KRR, KRRL, KRRI, KSV,                                 &
+       &  ONOMIXLG,KSV_LGBEG,KSV_LGEND,                         &
+       &  PTSTEP,                                               &
+       &  ZDZZ, ZZZ,                                            &
+       &  ZRHODJ, ZRHODREF,                                     &
+       &  ZPABSM, ZEXNM,                                        &
+       &  ZSFTH,ZSFRV,                                          &
+       &  ZTHM,ZRM,ZUM,&
+       &  ZVM,ZTKEM,ZSVM,                          &
+       &  ZDUDT_MF,ZDVDT_MF,ZDTKEDT_MF,               &
+       &  ZDTHLDT_MF,ZDRTDT_MF,ZDSVDT_MF,        &
+       &  ZSIGMF ,ZRC_MF,ZRI_MF,                     &
+       &  ZCF_MF,ZHLC_HRC,ZHLC_HCF,               &
+       &  ZHLI_HRI,ZHLI_HCF,                                &
+       &  ZWEIGHT_MF_CLOUD,ZFLXZTHVMF,               &
+       &  ZFLXZTHMF,ZFLXZRMF,ZFLXZUMF,ZFLXZVMF,&
+       &  ZFLXZTKEMF,ZTHL_UP,ZRT_UP,ZRV_UP,&
+       &  ZRC_UP,ZRI_UP,ZU_UP,                  &
+       &  ZV_UP, ZTKE_UP,ZTHV_UP, ZW_UP,     &
+       &  ZFRAC_UP,ZEMF,ZDETR,ZENTR,        &
+       &  IKLCL,IKETL,IKCTL,PDX,PDY,                            &
+       &  KBUDGETS=KBUDGETS, LDACC=LLACC,KGPBLKS=NGPBLKS   )
 
   ENDIF
 
@@ -410,7 +442,7 @@ ENDDO
 
 CALL GET_TIME (TEC)
 
-IF (TRIM (CLMETHOD) == 'openaccsinglecolumn') THEN
+IF (TRIM (CLMETHOD) == 'openaccsinglecolumn' .OR. TRIM (CLMETHOD) == 'openaccmanyblocks') THEN
   CALL WIPE (D)
   CALL WIPE (CST)
   CALL WIPE (NEBN)
@@ -458,6 +490,10 @@ ENDIF
 
 IF (LLDIFF) THEN
   CALL DIFFALL
+ENDIF
+
+IF (LLSTAT) THEN
+  CALL STATALL
 ENDIF
 
 IF (LLSAVE) THEN
@@ -647,6 +683,61 @@ CALL DIFF (" ZTKE_UP   ",         ZTKE_UP         , KLUN=ILUNFO, YDD=YLD)
 CLOSE (ILUNFO)
 
 IF (LLVERBOSE) PRINT *, " ...DIFF"
+
+END SUBROUTINE
+
+SUBROUTINE STATALL
+
+INTEGER :: ILUNFO
+
+IF (LLVERBOSE) PRINT *, " STAT..."
+
+WRITE (*, '(A32," ",A30," ",A30," ",A30," ",A30)') "NAME", "AVG", "MAX", "AVGDIFF", "MAXDIFF"
+
+ILUNFO = 79
+OPEN (ILUNFO, NAME=TRIM (CLCASE_IN)//'/SHALLOW_MF.OUT.dat', FORM='UNFORMATTED')
+CALL STAT (" ZDUDT_MF  ",         ZDUDT_MF        , KLUN=ILUNFO, YDD=YLD)    
+CALL STAT (" ZDVDT_MF  ",         ZDVDT_MF        , KLUN=ILUNFO, YDD=YLD)   
+CALL STAT (" ZDTHLDT_MF",         ZDTHLDT_MF      , KLUN=ILUNFO, YDD=YLD)   
+CALL STAT (" ZDRTDT_MF ",         ZDRTDT_MF       , KLUN=ILUNFO, YDD=YLD)    
+CALL STAT (" ZDSVDT_MF ",         ZDSVDT_MF       , KLUN=ILUNFO, YDD=YLD)   
+CALL STAT (" ZSIGMF    ",         ZSIGMF          , KLUN=ILUNFO, YDD=YLD)    
+CALL STAT (" ZRC_MF    ",         ZRC_MF          , KLUN=ILUNFO, YDD=YLD)   
+CALL STAT (" ZRI_MF    ",         ZRI_MF          , KLUN=ILUNFO, YDD=YLD)        
+CALL STAT (" ZCF_MF    ",         ZCF_MF          , KLUN=ILUNFO, YDD=YLD)        
+CALL STAT (" ZFLXZTHVM ",         ZFLXZTHVMF      , KLUN=ILUNFO, YDD=YLD)          
+CALL STAT (" ZFLXZTHMF ",         ZFLXZTHMF       , KLUN=ILUNFO, YDD=YLD)   
+CALL STAT (" ZFLXZRMF  ",         ZFLXZRMF        , KLUN=ILUNFO, YDD=YLD)  
+CALL STAT (" ZFLXZUMF  ",         ZFLXZUMF        , KLUN=ILUNFO, YDD=YLD)  
+CALL STAT (" ZFLXZVMF  ",         ZFLXZVMF        , KLUN=ILUNFO, YDD=YLD)  
+CALL STAT (" ZTHL_UP   ",         ZTHL_UP         , KLUN=ILUNFO, YDD=YLD)    
+CALL STAT (" ZRT_UP    ",         ZRT_UP          , KLUN=ILUNFO, YDD=YLD)      
+CALL STAT (" ZRV_UP    ",         ZRV_UP          , KLUN=ILUNFO, YDD=YLD)   
+CALL STAT (" ZU_UP     ",         ZU_UP           , KLUN=ILUNFO, YDD=YLD)     
+CALL STAT (" ZV_UP     ",         ZV_UP           , KLUN=ILUNFO, YDD=YLD)     
+CALL STAT (" ZRC_UP    ",         ZRC_UP          , KLUN=ILUNFO, YDD=YLD)        
+CALL STAT (" ZRI_UP    ",         ZRI_UP          , KLUN=ILUNFO, YDD=YLD)        
+CALL STAT (" ZTHV_UP   ",         ZTHV_UP         , KLUN=ILUNFO, YDD=YLD)       
+CALL STAT (" ZW_UP     ",         ZW_UP           , KLUN=ILUNFO, YDD=YLD)       
+CALL STAT (" ZFRAC_UP  ",         ZFRAC_UP        , KLUN=ILUNFO, YDD=YLD)       
+CALL STAT (" ZEMF      ",         ZEMF            , KLUN=ILUNFO, YDD=YLD)     
+CALL STAT (" ZDETR     ",         ZDETR           , KLUN=ILUNFO, YDD=YLD)      
+CALL STAT (" ZENTR     ",         ZENTR           , KLUN=ILUNFO, YDD=YLD)      
+CALL STAT (" IKLCL     ",         IKLCL           , KLUN=ILUNFO, YDD=YLD)     
+CALL STAT (" IKETL     ",         IKETL           , KLUN=ILUNFO, YDD=YLD)      
+CALL STAT (" IKCTL     ",         IKCTL           , KLUN=ILUNFO, YDD=YLD)     
+CALL STAT (" ZDTKEDT_MF",         ZDTKEDT_MF      , KLUN=ILUNFO, YDD=YLD) 
+CALL STAT (" ZHLC_HRC  ",         ZHLC_HRC        , KLUN=ILUNFO, YDD=YLD)  
+CALL STAT (" ZHLC_HCF  ",         ZHLC_HCF        , KLUN=ILUNFO, YDD=YLD) 
+CALL STAT (" ZHLI_HRI  ",         ZHLI_HRI        , KLUN=ILUNFO, YDD=YLD) 
+CALL STAT (" ZHLI_HCF  ",         ZHLI_HCF        , KLUN=ILUNFO, YDD=YLD) 
+CALL STAT (" ZWEIGHT_MF_CLOUD",   ZWEIGHT_MF_CLOUD, KLUN=ILUNFO, YDD=YLD) 
+CALL STAT (" ZFLXZTKEMF",         ZFLXZTKEMF      , KLUN=ILUNFO, YDD=YLD) 
+CALL STAT (" ZTKE_UP   ",         ZTKE_UP         , KLUN=ILUNFO, YDD=YLD) 
+
+CLOSE (ILUNFO)
+
+IF (LLVERBOSE) PRINT *, " ...STAT"
 
 END SUBROUTINE
 

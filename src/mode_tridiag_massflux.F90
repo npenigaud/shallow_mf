@@ -3,15 +3,15 @@
 !MNH_LIC version 1. See LICENSE, CeCILL-C_V1-en.txt and CeCILL-C_V1-fr.txt  
 !MNH_LIC for details. version 1.
 MODULE MODE_TRIDIAG_MASSFLUX
-
-!$ACDC singlecolumn
-!$ACDC bitrepro
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks 
 IMPLICIT NONE
 CONTAINS
 SUBROUTINE TRIDIAG_MASSFLUX(D,PVARM,PF,PDFDT,PTSTEP,PIMPL,  &
                                  PDZZ,PRHODJ,PVARP             )
 
        USE YOMHOOK , ONLY : LHOOK, DR_HOOK, JPHOOK
+
 !      #################################################
 !
 !

@@ -7,7 +7,8 @@
      MODULE MODE_COMPUTE_UPDRAFT
 
 !$ACDC singlecolumn --inline-contained
-!$ACDC bitrepro 
+!$ACDC manyblocks 
+
 !    ###########################
 !
 IMPLICIT NONE

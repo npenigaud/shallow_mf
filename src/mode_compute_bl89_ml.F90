@@ -1,7 +1,6 @@
 MODULE MODE_COMPUTE_BL89_ML
-
-!$ACDC singlecolumn
-!$ACDC bitrepro
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks
 
 IMPLICIT NONE
 CONTAINS
@@ -10,6 +9,7 @@ CONTAINS
              PTKEM_DEP,PG_O_THVREF,PVPT,KK,OUPORDN,OFLUX,PSHEAR,PLWORK)
 
       USE YOMHOOK , ONLY : LHOOK, DR_HOOK, JPHOOK
+
 !     ###################################################################
 !!
 !!     COMPUTE_BL89_ML routine to:

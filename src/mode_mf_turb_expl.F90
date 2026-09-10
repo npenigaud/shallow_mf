@@ -4,9 +4,9 @@
 !MNH_LIC for details. version 1.
 !    ######################
      MODULE MODE_MF_TURB_EXPL
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks 
 
-!$ACDC singlecolumn
-!$ACDC bitrepro 
 !    ######################
 IMPLICIT NONE
 CONTAINS
@@ -16,6 +16,7 @@ CONTAINS
                 PEMF,PTHL_UP,PTHV_UP,PRT_UP,PU_UP,PV_UP,PTKE_UP,      &
                 PFLXZTHLMF,PFLXZTHVMF,PFLXZRMF,PFLXZUMF,PFLXZVMF,PFLXZTKEMF,&
                 PFRAC_UP)
+
 
 !     #################################################################
 !

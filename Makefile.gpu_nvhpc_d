@@ -1,25 +1,26 @@
-FCFLAGS=-mp -Minfo -gopt -Mlarge_arrays -Mlist -traceback -Mnofma -Mbyteswapio -Mbackslash -Mstack_arrays -cuda -acc=gpu -O0 -r8 -gopt -gpu=lineinfo,cc70,cc80 -Minfo=accel,all,ccff -DARCH="'$(ARCH)'"
+FCFLAGS=-mp -fPIC -Minfo -gopt -Mlarge_arrays -Mlist -traceback -Mnofma -Mbyteswapio -Mbackslash -Mstack_arrays -cuda -acc=gpu -O2 -r8 -gopt -gpu=cc70,cc80,maxregcount:128 -Minfo=accel,all,ccff -DFXTRAN_ACDC_VENDOR=FXTRAN_ACDC_NVIDIA -DFXTRAN_ACDC_PRAGMA=FXTRAN_ACDC_OPENACC
+ -DARCH="'$(ARCH)'" -DFXTRAN_ACDC_VENDOR=FXTRAN_ACDC_NVIDIA -DFXTRAN_ACDC_PRAGMA=FXTRAN_ACDC_OPENACC
 
 ARCH=gpu_nvhpc_d
-LIBS=-lnvhpcwrapnvtx -lnvToolsExt
+LIBS=-lnvhpcwrapnvtx -lnvToolsExt -L/usr/local/apps/nvidia/24.5/Linux_x86_64/24.5/math_libs/12.4/targets/x86_64-linux/lib/ 
 
-CCFLAGS=-std=c++11 -acc=gpu -Minfo=accel,all,ccff -gpu=lineinfo,cc70,cc80 -O0 -cuda -Mnofma
+CCFLAGS=-std=c++11 -O2 -acc=gpu -gpu=cc70,cc80 -DFXTRAN_ACDC_VENDOR=FXTRAN_ACDC_NVIDIA -DFXTRAN_ACDC_PRAGMA=FXTRAN_ACDC_OPENACC
 
 FC=fxtran-f90 \
   --prefix fxtran-acdc \
   --user-directory-in user-in \
   --user-directory-out user-out \
   --config $(SRC)/fxtran.conf -- \
-  "$(PWD)/../wrap/NVHPC2405ECTRANSGPU/mpif90" \
-  $(FCFLAGS) -DARCH="'$(ARCH)'"
+  pgf90 \
+  $(FCFLAGS) -DARCH="'$(ARCH)'" -DFXTRAN_ACDC_VENDOR=FXTRAN_ACDC_NVIDIA -DFXTRAN_ACDC_PRAGMA=FXTRAN_ACDC_OPENACC
 
 boot: fxtran-acdc
 
 fxtran-acdc:
 	fxtran-boot --prefix fxtran-acdc \
-            --F90 "$(PWD)/..//wrap/NVHPC2405ECTRANSGPU/mpif90 $(FCFLAGS)" \
-            --CXX "/opt/softs/nvidia/hpc_sdk/Linux_x86_64/24.5/compilers/bin/nvc++ $(CCFLAGS)" 
+            --F90 "pgf90 $(FCFLAGS)" \
+            --CXX "pgc++ $(CCFLAGS) -DFXTRAN_ACDC_VENDOR=FXTRAN_ACDC_NVIDIA -DFXTRAN_ACDC_PRAGMA=FXTRAN_ACDC_OPENACC" 
 
-CC=gcc
+CC= gcc
 
 

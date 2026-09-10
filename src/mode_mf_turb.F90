@@ -4,9 +4,8 @@
 !MNH_LIC for details. version 1.
 !    ######################
      MODULE MODE_MF_TURB
-
-!$ACDC singlecolumn
-!$ACDC bitrepro 
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks 
 !    ######################
 !
 IMPLICIT NONE

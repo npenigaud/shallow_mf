@@ -5,9 +5,9 @@
 !-----------------------------------------------------------------
 !     ######spl
      MODULE MODE_COMPUTE_UPDRAFT_RAHA
-
 !$ACDC singlecolumn --inline-contained
-!$ACDC bitrepro
+!$ACDC manyblocks 
+
 !    ###########################
 !
 IMPLICIT NONE
@@ -26,6 +26,7 @@ CONTAINS
                                  PEMF,PDETR,PENTR,                   &
                                  PBUO_INTEG,KKLCL,KKETL,KKCTL,       &
                                  PDEPTH     )
+
 
 !     #################################################################
 !!

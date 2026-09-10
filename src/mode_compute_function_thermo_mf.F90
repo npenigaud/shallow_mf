@@ -4,9 +4,8 @@
 !MNH_LIC for details. version 1.
 !     ######spl
      MODULE MODE_COMPUTE_FUNCTION_THERMO_MF
-
-!$ACDC singlecolumn
-!$ACDC bitrepro
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks 
 
 !    ######################################
 !
@@ -15,6 +14,7 @@ CONTAINS
       SUBROUTINE COMPUTE_FUNCTION_THERMO_MF(D, CST, KRR,KRRL,KRRI,OSTATNW,   &
                                        PTH, PR, PEXN, PFRAC_ICE, PPABS,      &
                                        PT,PAMOIST,PATHETA                    )
+
 !     #################################################################
 !
 !!

@@ -61,6 +61,55 @@ sub fixCOUNTIdiom
 
 }
 
+sub fixNOTANYIdiom
+{
+  my ($s, %opts) = @_;
+
+  my $kidia = $opts{style}->kidia ();
+  my $kfdia = $opts{style}->kfdia ();
+  my $jlon  = $opts{style}->jlon ();
+
+# The following is used sometimes (eg acbl89.F90)
+#
+# ZTESTM=SUM(ZTESTSAVE(KIDIA:KFDIA))
+#
+# DO JJLEV=JLEV,KTDIAN+1,-1
+#   IF (ZTESTM > 0.0_JPRB) THEN
+#     DO JLON=KIDIA,KFDIA
+#       ZDLUP1   = ZGDZF(JLON,JJLEV)
+#       ZZTHVL   =(ZTHETA (JLON,JJLEV)+ZTHETA (JLON,JJLEV-1))/2.0_JPRB
+#       ...
+#       ZEN   (JLON)=ZEN  (JLON)-ZINCR*ZTEST0
+#     ENDDO
+#     ZTESTM=SUM(ZTESTSAVE(KIDIA:KFDIA))
+#   ENDIF
+# ENDDO
+
+# my @sum = &F ('//E-2/named-E[string(N)="SUM"]', $d);
+
+  for my $R ('function')
+    {
+
+      my $xpath =
+         '//E-2/op-E[string(op)=".NOT."]'
+       . "[/named-E[string(N)="ANY"]"
+       . "[./R-LT/$R-R/element-LT/element/op-E/named-E/R-LT/array-R/section-subscript-LT"
+       . "/section-subscript[string(.)=\"$kidia:$kfdia\"]]]";
+
+      my @notany = &F ($xpath, $s);
+
+# So we need to replace the NOT ANY by a scalar expression
+
+      for my $notany (@notany)
+        {
+          say("processing...")
+          my ($N) = &F ("./R-LT/$R-R/element-LT/element/op-E/named-E/N", $notany, 1);
+          my $N_jlon = &e ("$N($jlon)");
+          $notany->replaceNode ($N_jlon->cloneNode (1));
+        }
+    }
+}
+
 sub fixSUMIdiom
 {
   my ($s, %opts) = @_;
@@ -101,6 +150,7 @@ sub fixSUMIdiom
 
       for my $sum (@sum)
         {
+          say("processing...")
           my ($N) = &F ("./R-LT/$R-R/element-LT/element/named-E/N", $sum, 1);
           my $N_jlon = &e ("$N($jlon)");
           $sum->replaceNode ($N_jlon->cloneNode (1));
@@ -116,6 +166,7 @@ sub removeNpromaLoopsInSection
 
   my $var2dim = $opts{var2dim};
 
+  &fixNOTANYIdiom ($s, %opts);
   &fixSUMIdiom ($s, %opts);
   &fixCOUNTIdiom ($s, %opts);
  

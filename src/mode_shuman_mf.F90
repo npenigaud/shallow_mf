@@ -4,9 +4,8 @@
 !MNH_LIC for details. version 1.
 !     ##################
 MODULE MODE_SHUMAN_MF
-
-!$ACDC singlecolumn 
-!$ACDC bitrepro
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks
 !     ##################
 !
 IMPLICIT NONE
@@ -17,6 +16,7 @@ CONTAINS
 !     ###############################
       SUBROUTINE MZF_MF(D, PA, PMZF)
 !     ###############################
+
 !
 !!****  *MZF* -  SHUMAN_MF operator : mean operator in z direction for a
 !!                                 variable at a flux side
@@ -108,6 +108,7 @@ END DO
 END SUBROUTINE MZF_MF
 !     ###############################
       SUBROUTINE MZM_MF(D, PA, PMZM)
+
 !     ###############################
 !
 !!****  *MZM* -  SHUMAN_MF operator : mean operator in z direction for a
@@ -199,6 +200,7 @@ END DO
 END SUBROUTINE MZM_MF
 !     ###############################
       SUBROUTINE DZF_MF(D, PA, PDZF)
+
 !     ###############################
 !
 !!****  *DZF* -  SHUMAN_MF operator : finite difference operator in z direction
@@ -289,6 +291,7 @@ END DO
 END SUBROUTINE DZF_MF
 !     ###############################
       SUBROUTINE DZM_MF(D, PA, PDZM)
+
 !     ###############################
 !
 !!****  *DZM* -  SHUMAN_MF operator : finite difference operator in z direction
@@ -380,6 +383,7 @@ END SUBROUTINE DZM_MF
 
 !     ###############################
       SUBROUTINE GZ_M_W_MF(D, PY, PDZZ, PGZ_M_W)
+
 !     ###############################
 !
 !!****  *GZ_M_W * - Compute the gradient along z direction for a

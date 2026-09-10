@@ -5,9 +5,8 @@
 !-----------------------------------------------------------------
 !     ######spl
      MODULE MODE_COMPUTE_MF_CLOUD
-
-!$ACDC singlecolumn
-!$ACDC bitrepro 
+!$ACDC singlecolumn --inline-contained
+!$ACDC manyblocks 
 !    ############################
 !
 IMPLICIT NONE
@@ -25,6 +24,7 @@ CONTAINS
                                   PRC_MF, PRI_MF, PCF_MF, PSIGMF,           &
                                   PHLC_HRC, PHLC_HCF, PHLI_HRI, PHLI_HCF,   &
                                   PWEIGHT_MF_CLOUD)
+
 
 !     #################################################################
 !!
@@ -111,6 +111,7 @@ REAL, DIMENSION(D%NIJT,D%NKT),   INTENT(OUT)  ::  PCF_MF            ! and cloud 
 REAL, DIMENSION(D%NIJT,D%NKT),   INTENT(OUT)  ::  PSIGMF            ! SQRT(variance) for statistical cloud scheme
 REAL, DIMENSION(D%NIJT,D%NKT),   INTENT(OUT)  ::  PHLC_HRC, PHLC_HCF, PHLI_HRI, PHLI_HCF ! low/high cloud diagnostics
 REAL, DIMENSION(D%NIJT,D%NKT),   INTENT(OUT)  ::  PWEIGHT_MF_CLOUD ! weight coefficient for the mass-flux cloud
+INTEGER :: JI  !!!added to indicate routine style to fxtran-acdc
 !
 !                       1.2  Declaration of local variables
 !

@@ -5,9 +5,9 @@
 !-----------------------------------------------------------------
 !     ######spl
      MODULE MODE_COMPUTE_UPDRAFT_RHCJ10
-
 !$ACDC singlecolumn --inline-contained
-!$ACDC bitrepro
+!$ACDC manyblocks 
+
 !    ###########################
 !
 IMPLICIT NONE
@@ -28,6 +28,7 @@ SUBROUTINE COMPUTE_UPDRAFT_RHCJ10(D,CST,NEBN,PARAMMF,TURBN,CSTURB,&
                                  PEMF,PDETR,PENTR,                &
                                  PBUO_INTEG,KKLCL,KKETL,KKCTL,    &
                                  PDEPTH     )
+
 !     #################################################################
 !!
 !!****  *COMPUTE_UPDRAFT_RHCJ10* - calculates caracteristics of the updraft
